@@ -4,6 +4,11 @@
 using System;
 using System.Collections.Generic;
 
+using Jitter2.Collision.Shapes;
+using Jitter2.LinearMath;
+
+using Prowl.Echo;
+using Prowl.Runtime.Resources;
 using Prowl.Vector;
 
 namespace Prowl.Runtime;
@@ -38,13 +43,17 @@ public class CharacterController : MonoBehaviour
     public enum ColliderShape
     {
         Capsule,
-        Cylinder
+        Cylinder,
+        Mesh
     }
 
     public ColliderShape Shape = ColliderShape.Cylinder;
     public float Radius = 0.5f;
     public float Height = 1.8f;
     public float SkinWidth = 0.02f;
+
+    [SerializeIgnore] private ConvexHullShape? _cachedMeshShape;
+    [SerializeIgnore] private Float3 _cachedMeshScale = Float3.Zero;
 
     /// <summary>
     /// Desplazamiento del centro de la forma de colisión respecto al origen del GameObject.
@@ -294,6 +303,13 @@ public class CharacterController : MonoBehaviour
     {
         results.Clear();
 
+        if (Shape == ColliderShape.Mesh)
+        {
+            var hull = ResolveMeshShape();
+            if (hull == null) return 0;
+            return GameObject.Scene.Physics.Overlap(hull, Quaternion.Identity, GetShapeCenter(position), results, Filter);
+        }
+
         if (Shape == ColliderShape.Capsule)
         {
             return GameObject.Scene.Physics.OverlapCapsule(
@@ -413,6 +429,14 @@ public class CharacterController : MonoBehaviour
         float effectiveRadius = radius - SkinWidth;
         Float3 origin = position + Center;
 
+        if (Shape == ColliderShape.Mesh)
+        {
+            var hull = ResolveMeshShape();
+            if (hull == null) return false;
+            var hits = new List<ShapeCastHit>();
+            return GameObject.Scene.Physics.Overlap(hull, Quaternion.Identity, position + Center, hits, Filter) > 0;
+        }
+
         if (Shape == ColliderShape.Capsule)
         {
             Float3 bottom = origin + new Float3(0, radius, 0);
@@ -449,10 +473,57 @@ public class CharacterController : MonoBehaviour
     }
 
     /// <summary>
+    /// Devuelve un ConvexHullShape de la malla del MeshRenderer hermano, escalado por
+    /// Transform.LossyScale. Cachea el resultado y solo lo reconstruye si la escala cambió.
+    /// Devuelve null si no hay MeshRenderer o la malla no tiene triángulos.
+    /// </summary>
+    private ConvexHullShape? ResolveMeshShape()
+    {
+        Float3 currentScale = Transform.LossyScale;
+        if (_cachedMeshShape != null && _cachedMeshScale.Equals(currentScale))
+            return _cachedMeshShape;
+
+        var mr = GetComponent<MeshRenderer>();
+        if (mr.IsNotValid()) return null;
+
+        AssetRef<Mesh> rendererMesh = mr.Mesh;
+        rendererMesh.EnsureLoaded();
+        Mesh? m = rendererMesh.Res;
+        if (m == null) return null;
+
+        var baked = PhysicsWorld.BakeMesh(m);
+        if (baked.Triangles.Count == 0) return null;
+
+        // Escalar los vértices del hull por LossyScale para que la colisión siga al Transform
+        var scaledTris = new List<JTriangle>(baked.Triangles.Count);
+        foreach (var tri in baked.Triangles)
+        {
+            scaledTris.Add(new JTriangle(
+                ScaleVector(tri.V0, currentScale),
+                ScaleVector(tri.V1, currentScale),
+                ScaleVector(tri.V2, currentScale)));
+        }
+
+        _cachedMeshShape = new ConvexHullShape(scaledTris);
+        _cachedMeshScale = currentScale;
+        return _cachedMeshShape;
+    }
+
+    private static JVector ScaleVector(JVector v, Float3 scale)
+        => new JVector(v.X * scale.X, v.Y * scale.Y, v.Z * scale.Z);
+
+    /// <summary>
     /// Performs a shape cast based on the current shape type.
     /// </summary>
     private bool PerformShapeCast(Float3 position, Float3 direction, float distance, out ShapeCastHit hitInfo)
     {
+        if (Shape == ColliderShape.Mesh)
+        {
+            var hull = ResolveMeshShape();
+            if (hull == null) { hitInfo = default; return false; }
+            return GameObject.Scene.Physics.ShapeCast(hull, Quaternion.Identity, GetShapeCenter(position), direction, distance, out hitInfo, Filter);
+        }
+
         if (Shape == ColliderShape.Capsule)
         {
             return GameObject.Scene.Physics.CapsuleCast(
@@ -675,7 +746,25 @@ public class CharacterController : MonoBehaviour
 
         Float3 position = GameObject.Transform.Position;
 
-        if (Shape == ColliderShape.Capsule)
+        if (Shape == ColliderShape.Mesh)
+        {
+            var hull = ResolveMeshShape();
+            if (hull != null)
+            {
+                var tris = ShapeHelper.Tessellate(hull, 2);
+                JVector shift = hull.Shift;
+                foreach (JTriangle tri in tris)
+                {
+                    Float3 a = new Float3(tri.V0.X + shift.X, tri.V0.Y + shift.Y, tri.V0.Z + shift.Z) + Center;
+                    Float3 b = new Float3(tri.V1.X + shift.X, tri.V1.Y + shift.Y, tri.V1.Z + shift.Z) + Center;
+                    Float3 c = new Float3(tri.V2.X + shift.X, tri.V2.Y + shift.Y, tri.V2.Z + shift.Z) + Center;
+                    Debug.DrawLine(position + a, position + b, Color.Cyan);
+                    Debug.DrawLine(position + b, position + c, Color.Cyan);
+                    Debug.DrawLine(position + c, position + a, Color.Cyan);
+                }
+            }
+        }
+        else if (Shape == ColliderShape.Capsule)
         {
             Debug.DrawWireCapsule(GetCapsuleBottom(position), GetCapsuleTop(position), Radius, Color.Cyan, 16);
         }
