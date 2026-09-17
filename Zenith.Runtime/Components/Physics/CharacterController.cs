@@ -1,4 +1,4 @@
-Ôªø// This file is part of the Prowl Game Engine
+// This file is part of the Prowl Game Engine
 // Licensed under the MIT License. See the LICENSE file in the project root for details.
 
 using System;
@@ -56,9 +56,9 @@ public class CharacterController : MonoBehaviour
     [SerializeIgnore] private Float3 _cachedMeshScale = Float3.Zero;
 
     /// <summary>
-    /// Desplazamiento del centro de la forma de colisi√≥n respecto al origen del GameObject.
-    /// Por defecto (0, 0, 0) mantiene el comportamiento original: el origen est√° en los pies
-    /// y la forma se centra a Height/2 sobre √©l.
+    /// Desplazamiento del centro de la forma de colisiÛn respecto al origen del GameObject.
+    /// Por defecto (0, 0, 0) mantiene el comportamiento original: el origen est· en los pies
+    /// y la forma se centra a Height/2 sobre Èl.
     /// </summary>
     public Float3 Center = Float3.Zero;
 
@@ -307,7 +307,7 @@ public class CharacterController : MonoBehaviour
         {
             var hull = ResolveMeshShape();
             if (hull == null) return 0;
-            return GameObject.Scene.Physics.Overlap(hull, Quaternion.Identity, GetShapeCenter(position), results, Filter);
+            return GameObject.Scene.Physics.Overlap(hull, Quaternion.Identity, position + Center, results, Filter);
         }
 
         if (Shape == ColliderShape.Capsule)
@@ -474,8 +474,8 @@ public class CharacterController : MonoBehaviour
 
     /// <summary>
     /// Devuelve un ConvexHullShape de la malla del MeshRenderer hermano, escalado por
-    /// Transform.LossyScale. Cachea el resultado y solo lo reconstruye si la escala cambi√≥.
-    /// Devuelve null si no hay MeshRenderer o la malla no tiene tri√°ngulos.
+    /// Transform.LossyScale. Cachea el resultado y solo lo reconstruye si la escala cambiÛ.
+    /// Devuelve null si no hay MeshRenderer o la malla no tiene tri·ngulos.
     /// </summary>
     private ConvexHullShape? ResolveMeshShape()
     {
@@ -494,7 +494,7 @@ public class CharacterController : MonoBehaviour
         var baked = PhysicsWorld.BakeMesh(m);
         if (baked.Triangles.Count == 0) return null;
 
-        // Escalar los v√©rtices del hull por LossyScale para que la colisi√≥n siga al Transform
+        // Escalar los vÈrtices del hull por LossyScale para que la colisiÛn siga al Transform
         var scaledTris = new List<JTriangle>(baked.Triangles.Count);
         foreach (var tri in baked.Triangles)
         {
@@ -521,7 +521,7 @@ public class CharacterController : MonoBehaviour
         {
             var hull = ResolveMeshShape();
             if (hull == null) { hitInfo = default; return false; }
-            return GameObject.Scene.Physics.ShapeCast(hull, Quaternion.Identity, GetShapeCenter(position), direction, distance, out hitInfo, Filter);
+            return GameObject.Scene.Physics.ShapeCast(hull, Quaternion.Identity, position + Center, direction, distance, out hitInfo, Filter);
         }
 
         if (Shape == ColliderShape.Capsule)
