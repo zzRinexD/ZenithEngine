@@ -46,6 +46,13 @@ public class CharacterController : MonoBehaviour
     public float Height = 1.8f;
     public float SkinWidth = 0.02f;
 
+    /// <summary>
+    /// Desplazamiento del centro de la forma de colisión respecto al origen del GameObject.
+    /// Por defecto (0, 0, 0) mantiene el comportamiento original: el origen está en los pies
+    /// y la forma se centra a Height/2 sobre él.
+    /// </summary>
+    public Float3 Center = Float3.Zero;
+
     /// <summary>Which layers the controller collides with.</summary>
     public LayerMask CollisionMask = LayerMask.Everything;
 
@@ -153,13 +160,13 @@ public class CharacterController : MonoBehaviour
     public Rigidbody3D? GroundBody => IsGrounded ? lastGroundHit.Rigidbody : null;
 
     /// <summary>The middle of the controller's shape in world space.</summary>
-    public Float3 Center => GetShapeCenter(GameObject.Transform.Position);
+    public Float3 WorldCenter => GetShapeCenter(GameObject.Transform.Position);
 
     /// <summary>The bottom of the controller in world space, which is where it stands.</summary>
-    public Float3 Bottom => GameObject.Transform.Position;
+    public Float3 Bottom => GameObject.Transform.Position + Center;
 
     /// <summary>The top of the controller in world space.</summary>
-    public Float3 Top => GameObject.Transform.Position + new Float3(0, Height, 0);
+    public Float3 Top => GameObject.Transform.Position + Center + new Float3(0, Height, 0);
 
     // Debug visualization for failed height attempts
     private bool failedHeightAttempt = false;
@@ -404,26 +411,27 @@ public class CharacterController : MonoBehaviour
     private bool CheckShapeOverlap(Float3 position, float height, float radius)
     {
         float effectiveRadius = radius - SkinWidth;
+        Float3 origin = position + Center;
 
         if (Shape == ColliderShape.Capsule)
         {
-            Float3 bottom = position + new Float3(0, radius, 0);
-            Float3 top = position + new Float3(0, height - radius, 0);
+            Float3 bottom = origin + new Float3(0, radius, 0);
+            Float3 top = origin + new Float3(0, height - radius, 0);
             return GameObject.Scene.Physics.CheckCapsule(bottom, top, effectiveRadius, Filter);
         }
         else // Cylinder
         {
-            Float3 center = position + new Float3(0, height * 0.5f, 0);
+            Float3 center = origin + new Float3(0, height * 0.5f, 0);
             return GameObject.Scene.Physics.CheckCylinder(center, effectiveRadius, height, Quaternion.Identity, Filter);
         }
     }
 
     // The controller stands on its origin, so its centre is half a height up whatever the shape.
-    private Float3 GetShapeCenter(Float3 position) => position + new Float3(0, Height * 0.5f, 0);
+    private Float3 GetShapeCenter(Float3 position) => position + Center + new Float3(0, Height * 0.5f, 0);
 
     private Float3 GetCapsuleBottom(Float3 position)
     {
-        return position + new Float3(0, GetEffectiveRadius(), 0);
+        return position + Center + new Float3(0, GetEffectiveRadius(), 0);
     }
 
     private Float3 GetCapsuleTop(Float3 position)
@@ -431,7 +439,7 @@ public class CharacterController : MonoBehaviour
         // Keep the segment non-degenerate: Jitter rejects a capsule of zero length outright, and a
         // Height at or below twice the radius would produce one.
         float radius = GetEffectiveRadius();
-        return position + new Float3(0, Maths.Max(Height - radius, radius + 0.001f), 0);
+        return position + Center + new Float3(0, Maths.Max(Height - radius, radius + 0.001f), 0);
     }
 
     // Shape dimensions must stay positive; Jitter throws on a zero or negative radius.
