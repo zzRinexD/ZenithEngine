@@ -1,0 +1,9 @@
+Initialization complete
+GPU: Intel(R) UHD Graphics (Intel) - OpenGL 4.1.0 - Build 32.0.101.7082
+Compiling shader pass UI with keywords: 
+Loaded fallback font: Prowl.Editor.Resources.fa-regular-400.ttf (63952 bytes)
+Loaded fallback font: Prowl.Editor.Resources.fa-solid-900.ttf (394628 bytes)
+Loaded 1 system fallback font(s) for international text.
+VAO: [ID 0] Mesh uploaded successfully to VRAM (GPU)
+Compiling shader pass BlurDown with keywords: HAS_UV;
+Compiling shader pass BlurUp with keywords: HAS_UV;

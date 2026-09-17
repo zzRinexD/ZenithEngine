@@ -10,6 +10,7 @@
     <NoWarn>8600;8601;8618;8602;8603;8604;8625</NoWarn>
     <ApplicationIcon>prowl.ico</ApplicationIcon>
     <AssemblyName>Prowl.Editor</AssemblyName>
+    <RootNamespace>Prowl.Editor</RootNamespace>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">

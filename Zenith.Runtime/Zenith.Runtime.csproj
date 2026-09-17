@@ -10,6 +10,7 @@
     <IsAotCompatible>true</IsAotCompatible>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AssemblyName>Prowl.Runtime</AssemblyName>
+    <RootNamespace>Prowl.Runtime</RootNamespace>
   </PropertyGroup>
 
   <!-- Allow test project to access internal members -->
