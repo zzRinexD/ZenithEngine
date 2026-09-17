@@ -532,7 +532,7 @@ public class PreferencesPanel : DockPanel
                     paper.Box("pref_pv_logo").Width(13).Height(13).Margin(0, 0, UnitValue.StretchOne, UnitValue.StretchOne).Rounded(4)
                         .BackgroundColor(EditorTheme.Accent).IsNotInteractable();
                     paper.Box("pref_pv_name").Margin(SP, 0, 0, 0).IsNotInteractable()
-                        .Text("Prowl", font).TextColor(EditorTheme.Ink500).FontSize(EditorTheme.FontSizeSmall)
+                        .Text("Zenith", font).TextColor(EditorTheme.Ink500).FontSize(EditorTheme.FontSizeSmall)
                         .Alignment(TextAlignment.MiddleLeft);
                     for (int i = 0; i < 3; i++)
                         paper.Box($"pref_pv_wdot{i}").Width(7).Height(7).Margin(0, 0, UnitValue.StretchOne, UnitValue.StretchOne).Rounded(4)

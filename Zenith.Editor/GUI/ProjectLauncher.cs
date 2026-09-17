@@ -164,7 +164,7 @@ public static class ProjectLauncher
 
             // Wordmark scaled up to fill the header height (version line removed), vertically centered.
             P.Box("pl_prowl").Width(UnitValue.Auto).Height(UnitValue.Auto).Margin(13, 0, UnitValue.StretchOne, UnitValue.StretchOne)
-                .Text("PROWL", EditorTheme.FontLogo ?? display).FontSize(30f * TS).LetterSpacing(6f).TextColor(EditorTheme.Ink500).Alignment(TextAlignment.MiddleLeft);
+                .Text("ZENITH", EditorTheme.FontLogo ?? display).FontSize(30f * TS).LetterSpacing(6f).TextColor(EditorTheme.Ink500).Alignment(TextAlignment.MiddleLeft);
 
             P.Box("pl_hspacer");
 

@@ -1136,7 +1136,7 @@ public class EditorApplication : Game
     // (cx, cy) as one unit, both at the given fade alpha.
     private static void DrawIntroBrand(Prowl.Quill.Canvas canvas, float cx, float cy, byte alpha, Scribe.FontFile? font)
     {
-        const string word = "PROWL";
+        const string word = "ZENITH";
         const float letterSpacing = 10f, gap = 8f;
         var tint = System.Drawing.Color.FromArgb(alpha, 230, 230, 230);
 

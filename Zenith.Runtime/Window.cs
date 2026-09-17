@@ -257,7 +257,7 @@ public static class Window
             }
             InternalWindow.SetWindowIcon(icons);
         }
-        catch { /* no icon shipped, or the platform doesn't support it - keep the default */ }
+        catch (System.Exception ex) { Prowl.Runtime.Debug.LogWarning($"Failed to set window icon: {ex.Message}"); }
     }
 
     public static void OnResize(Vector2D<int> size) => Resize?.Invoke(size);

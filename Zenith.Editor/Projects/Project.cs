@@ -177,7 +177,7 @@ public class Project
         var data = new
         {
             name = Name,
-            engine = "Prowl",
+            engine = "Zenith",
             version = "0.0.1",
             created = DateTime.UtcNow.ToString("o")
         };
