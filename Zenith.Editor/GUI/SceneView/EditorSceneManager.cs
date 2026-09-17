@@ -97,14 +97,14 @@ public static class EditorSceneManager
         scene.Add(floorGo);
 
         var cube1 = new GameObject("Cube");
-        cube1.Transform.Position = new Float3(0, 0.5f, 0);
+        cube1.Transform.Position = new Float3(0, 0.51f, 0);
         var cube1Renderer = cube1.AddComponent<MeshRenderer>();
         cube1Renderer.Mesh = cubeMesh;
         cube1Renderer.Material = defaultMat;
         scene.Add(cube1);
 
         var cube2 = new GameObject("Cube (1)");
-        cube2.Transform.Position = new Float3(2, 0.5f, 1);
+        cube2.Transform.Position = new Float3(2, 0.51f, 1);
         var cube2Renderer = cube2.AddComponent<MeshRenderer>();
         cube2Renderer.Mesh = cubeMesh;
         cube2Renderer.Material = defaultMat;
