@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Fondo oscuro estilo obsidiana -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1b1b22"/>
+      <stop offset="100%" stop-color="#08080a"/>
+    </linearGradient>
+
+    <!-- Borde sutil del Squircle -->
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38384a"/>
+      <stop offset="100%" stop-color="#121216"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 1. BASE: Squircle (Icono moderno) -->
+  <rect x="32" y="32" width="448" height="448" rx="110" ry="110" fill="url(#bgGrad)" stroke="url(#borderGrad)" stroke-width="5"/>
+
+  <!-- Cuadrícula 3D de fondo (Grid del suelo) -->
+  <path d="M110 395 L402 395 M140 425 L372 425 M160 365 L352 365" stroke="#ffffff" stroke-opacity="0.04" stroke-width="2"/>
+
+  <!-- ================================================================= -->
+  <!-- GRUPO PRINCIPAL: ESCALADO 1.40x (EQUILIBRIO PERFECTO) Y ROTADO -8°-->
+  <!-- ================================================================= -->
+  <g transform="translate(256, 256) rotate(-8) scale(1.40) translate(-256, -256)">
+
+    <!-- Guía esférica exterior tenue (Fondo) -->
+    <circle cx="256" cy="256" r="145" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-dasharray="5 7" opacity="0.25"/>
+
+    <!-- ======================================================== -->
+    <!-- 2. CAPA TRASERA: MITADES DE LOS AROS QUE VAN POR DETRÁS  -->
+    <!-- (Ocultadas limpiamente por la Z)                         -->
+    <!-- ======================================================== -->
+
+    <!-- ARO VERDE TRASERO (Arco superior del plano horizontal) -->
+    <path d="M 114 256 A 142 48 0 0 1 398 256" fill="none" stroke="#00e676" stroke-width="7" opacity="0.95"/>
+
+    <!-- ARO ROJO TRASERO (Arco inclinado que va hacia el fondo) -->
+    <g transform="rotate(25, 256, 256)">
+      <path d="M 256 114 A 48 142 0 0 1 256 398" fill="none" stroke="#ff3b5c" stroke-width="7" opacity="0.95"/>
+    </g>
+
+
+    <!-- ======================================================== -->
+    <!-- 3. CAPA MEDIA: LA "Z" (TAPA LO QUE TIENE DETRÁS)         -->
+    <!-- ======================================================== -->
+
+    <!-- Sombra propia de la Z -->
+    <path d="M 160 155 L 350 155 L 350 210 L 245 335 L 355 335 L 355 385 L 150 385 L 150 330 L 260 205 L 160 205 Z" 
+          fill="#000000" 
+          opacity="0.5"/>
+
+    <!-- Cuerpo de la Z blanca ultra-bold -->
+    <path d="M 160 145 L 350 145 L 350 200 L 245 325 L 355 325 L 355 375 L 150 375 L 150 320 L 260 195 L 160 195 Z" 
+          fill="#ffffff"/>
+
+
+    <!-- ======================================================== -->
+    <!-- 4. CAPA FRONTAL: MITADES DE LOS AROS QUE VAN POR DELANTE -->
+    <!-- (Cruzan limpiamente por encima de la Z)                  -->
+    <!-- ======================================================== -->
+
+    <!-- ARO VERDE DELANTERO (Arco inferior que pasa por el frente) -->
+    <path d="M 398 256 A 142 48 0 0 1 114 256" fill="none" stroke="#00e676" stroke-width="7" opacity="0.95"/>
+
+    <!-- ARO ROJO DELANTERO (Arco inclinado que pasa por el frente) -->
+    <g transform="rotate(25, 256, 256)">
+      <path d="M 256 398 A 48 142 0 0 1 256 114" fill="none" stroke="#ff3b5c" stroke-width="7" opacity="0.95"/>
+    </g>
+
+    <!-- ARO AZUL FRONTAL (Eje Z completo en plano de pantalla) -->
+    <ellipse cx="256" cy="256" rx="140" ry="140" fill="none" stroke="#2979ff" stroke-width="6.5" opacity="0.95"/>
+
+
+    <!-- ======================================================== -->
+    <!-- 5. FLECHAS DE TRASLACIÓN 3D Y PIVOTE (CENTRO)            -->
+    <!-- ======================================================== -->
+    <g transform="translate(256, 256)">
+      
+      <!-- Flecha Verde (Y / Arriba) -->
+      <line x1="0" y1="0" x2="0" y2="-78" stroke="#00e676" stroke-width="7" stroke-linecap="round"/>
+      <polygon points="0,-98 -11,-78 11,-78" fill="#00e676"/>
+
+      <!-- Flecha Roja (X / Derecha) -->
+      <line x1="0" y1="0" x2="78" y2="0" stroke="#ff3b5c" stroke-width="7" stroke-linecap="round"/>
+      <polygon points="102,0 78,-11 78,11" fill="#ff3b5c"/>
+
+      <!-- Flecha Azul (Z / Perspectiva) -->
+      <line x1="0" y1="0" x2="-50" y2="50" stroke="#2979ff" stroke-width="7" stroke-linecap="round"/>
+      <polygon points="-68,68 -46,64 -64,46" fill="#2979ff"/>
+
+      <!-- Pivote Central con núcleo blanco -->
+      <circle cx="0" cy="0" r="8" fill="#ffffff" stroke="#111111" stroke-width="3"/>
+    </g>
+
+  </g>
+</svg>

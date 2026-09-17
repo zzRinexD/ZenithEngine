@@ -110,7 +110,7 @@ public class EditorApplication : Game
                 ScriptAssemblyManager.RequestRecompile();
 
                 projectAlreadyInitialized = true;
-                Window.InternalWindow.Title = $"Prowl Editor - {project.Name}";
+                Window.InternalWindow.Title = $"Zenith Engine | {project.Name}";
             }
             catch (Exception ex)
             {
@@ -430,7 +430,7 @@ public class EditorApplication : Game
             GUI.EditorGuide.ArmAutoStart(); // let the tour play once for this freshly-opened project
             if (Project.Current != null)
             {
-                Window.InternalWindow.Title = $"Prowl Editor - {Project.Current.Name}";
+                Window.InternalWindow.Title = $"Zenith Engine | {Project.Current.Name}";
 
                 // Initialize the asset database for the opened project
                 var db = new EditorAssetBackend(Project.Current);

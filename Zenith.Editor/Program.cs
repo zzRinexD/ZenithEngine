@@ -124,7 +124,7 @@ public static class Program
         }
 
         var editor = new EditorApplication();
-        editor.Run("Prowl Editor", 1920, 1080);
+        editor.Run("Zenith Engine", 1920, 1080);
 
         //Runtime.Window.InternalWindow.WindowState = EditorSettings.Instance.WindowMaximized ? Silk.NET.Windowing.WindowState.Maximized : Silk.NET.Windowing.WindowState.Normal;
     }
