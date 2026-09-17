@@ -19,7 +19,7 @@
     since a build references exactly one player and never two.
   -->
   <ItemGroup>
-    <ProjectReference Include="..\..\Prowl.Runtime\Prowl.Runtime.csproj" />
+    <ProjectReference Include="..\..\Zenith.Runtime\Zenith.Runtime.csproj" />
   </ItemGroup>
 
 </Project>

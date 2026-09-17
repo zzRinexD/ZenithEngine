@@ -9,6 +9,7 @@
     <Version>1.0-preview-4</Version>
     <NoWarn>8600;8601;8618;8602;8603;8604;8625</NoWarn>
     <ApplicationIcon>prowl.ico</ApplicationIcon>
+    <AssemblyName>Prowl.Editor</AssemblyName>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -20,12 +21,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Prowl.Runtime\Prowl.Runtime.csproj" />
+    <ProjectReference Include="..\Zenith.Runtime\Zenith.Runtime.csproj" />
     <PackageReference Include="Prowl.Ember" Version="$(ProwlPackageVersion)" />
     <PackageReference Include="Prowl.Ember.Analyzers" Version="$(ProwlPackageVersion)" />
     <!-- EngineObject null-safety analyzer: analyzes the editor's own source, and (as a normal reference) is
          copied to output + made available in-process so RoslynScriptBackend applies it to user scripts too. -->
-    <ProjectReference Include="..\Prowl.Analyzers\Prowl.Analyzers.csproj" OutputItemType="Analyzer" />
+    <ProjectReference Include="..\Zenith.Analyzers\Zenith.Analyzers.csproj" OutputItemType="Analyzer" />
   </ItemGroup>
 
   <!-- Fix for Linux Builds -->
@@ -56,7 +57,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Players\Desktop\Prowl.Player.Desktop.csproj" />
+    <ProjectReference Include="..\Players\Desktop\Zenith.Player.Desktop.csproj" />
   </ItemGroup>
 
 </Project>

@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.0.11121.172
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Prowl.Runtime", "Prowl.Runtime\Prowl.Runtime.csproj", "{863FF67B-9C3F-4E5E-9353-AD88CD9F77D2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Prowl.Runtime", "Zenith.Runtime\Zenith.Runtime.csproj", "{863FF67B-9C3F-4E5E-9353-AD88CD9F77D2}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Prowl.Runtime.Test", "Prowl.Runtime.Test\Prowl.Runtime.Test.csproj", "{1255E3CE-2675-41C1-89B4-877DCB1EBEA0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Prowl.Runtime.Test", "Zenith.Runtime.Test\Zenith.Runtime.Test.csproj", "{1255E3CE-2675-41C1-89B4-877DCB1EBEA0}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
@@ -25,17 +25,17 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlyCamera", "Samples\FlyCam
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CarPhysicsDemo", "Samples\CarPhysicsDemo\CarPhysicsDemo.csproj", "{F1A2B3C4-D5E6-7890-1234-56789ABCDEF0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prowl.Editor", "Prowl.Editor\Prowl.Editor.csproj", "{F0DFDD68-2F29-4637-9C99-D42CC53F21A3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prowl.Editor", "Zenith.Editor\Zenith.Editor.csproj", "{F0DFDD68-2F29-4637-9C99-D42CC53F21A3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prowl.Editor.Test", "Prowl.Editor.Test\Prowl.Editor.Test.csproj", "{E322A63A-8D99-4D4E-ABDA-61813172418F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prowl.Editor.Test", "Zenith.Editor.Test\Zenith.Editor.Test.csproj", "{E322A63A-8D99-4D4E-ABDA-61813172418F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prowl.Analyzers", "Prowl.Analyzers\Prowl.Analyzers.csproj", "{85602794-3399-4FC1-B19E-7D41C14B2FE4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prowl.Analyzers", "Zenith.Analyzers\Zenith.Analyzers.csproj", "{85602794-3399-4FC1-B19E-7D41C14B2FE4}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Players", "Players", "{4BB02C67-0DCC-2335-0579-3418CCD36E63}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Desktop", "Desktop", "{BC045A7E-B510-A134-5D9B-A0A1CEE6F6F5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prowl.Player.Desktop", "Players\Desktop\Prowl.Player.Desktop.csproj", "{FCFBEA1D-3479-47E0-912C-D52DAB7417FC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prowl.Player.Desktop", "Players\Desktop\Zenith.Player.Desktop.csproj", "{FCFBEA1D-3479-47E0-912C-D52DAB7417FC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Prowl.Runtime\Prowl.Runtime.csproj" />
+    <ProjectReference Include="..\..\Zenith.Runtime\Zenith.Runtime.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -25,3 +25,4 @@
   </ItemGroup>
 
 </Project>
+

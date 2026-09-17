@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>Prowl.Editor.Test</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Prowl.Editor\Prowl.Editor.csproj" />
+    <ProjectReference Include="..\Zenith.Editor\Zenith.Editor.csproj" />
   </ItemGroup>
 
 </Project>

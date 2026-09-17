@@ -9,6 +9,7 @@
     <IsPackable>false</IsPackable>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AssemblyName>Prowl.Analyzers</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

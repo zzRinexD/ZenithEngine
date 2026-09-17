@@ -7,6 +7,7 @@
     <IsPackable>false</IsPackable>
     <!-- Audio effects take NativeArray<float>, which wraps a raw pointer. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>Prowl.Runtime.Test</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Prowl.Runtime\Prowl.Runtime.csproj" />
+    <ProjectReference Include="..\Zenith.Runtime\Zenith.Runtime.csproj" />
   </ItemGroup>
 
 </Project>
