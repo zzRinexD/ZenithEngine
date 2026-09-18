@@ -284,7 +284,7 @@ public class PlayerController : MonoBehaviour
         if (crouchInput && !isCrouching)
         {
             // Try to crouch
-            if (characterController.TrySetHeight(CrouchHeight))
+            if (characterController.TrySetSize(new Float3(characterController.Size.X, CrouchHeight, characterController.Size.Z)))
             {
                 isCrouching = true;
             }
@@ -292,11 +292,11 @@ public class PlayerController : MonoBehaviour
         else if (!crouchInput && isCrouching)
         {
             // Try to stand up (only if there's clearance above)
-            if (characterController.TrySetHeight(StandingHeight))
+            if (characterController.TrySetSize(new Float3(characterController.Size.X, StandingHeight, characterController.Size.Z)))
             {
                 isCrouching = false;
             }
-            // If TrySetHeight fails, player remains crouched (not enough clearance)
+            // If TrySetSize fails, player remains crouched (not enough clearance)
         }
     }
 

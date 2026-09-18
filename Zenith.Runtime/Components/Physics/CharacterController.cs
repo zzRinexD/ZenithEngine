@@ -44,12 +44,22 @@ public class CharacterController : MonoBehaviour
     {
         Capsule,
         Cylinder,
+        Sphere,
+        Box,
         Mesh
     }
 
     public ColliderShape Shape = ColliderShape.Cylinder;
-    public float Radius = 0.5f;
-    public float Height = 1.8f;
+
+    /// <summary>
+    /// Dimensiones de la forma de colision (bounding box local).
+    /// Capsule/Cylinder: X y Z definen el diametro (radio = min(X,Z)/2), Y la altura total.
+    /// Sphere: el menor de XYZ define el diametro.
+    /// Box: X, Y, Z son las dimensiones completas.
+    /// Mesh: multiplicador de escala aplicado al ConvexHull de la malla.
+    /// </summary>
+    public Float3 Size = new Float3(1, 1, 1);
+
     public float SkinWidth = 0.02f;
 
     [SerializeIgnore] private ConvexHullShape? _cachedMeshShape;
@@ -175,12 +185,7 @@ public class CharacterController : MonoBehaviour
     public Float3 Bottom => GameObject.Transform.Position + Center;
 
     /// <summary>The top of the controller in world space.</summary>
-    public Float3 Top => GameObject.Transform.Position + Center + new Float3(0, Height, 0);
-
-    // Debug visualization for failed height attempts
-    private bool failedHeightAttempt = false;
-    private float failedAttemptHeight;
-    private float failedAttemptRadius;
+    public Float3 Top => GameObject.Transform.Position + Center + new Float3(0, Size.Y, 0);
 
     /// <summary>
     /// Moves the character controller by the specified motion vector, sliding along whatever it
@@ -310,6 +315,18 @@ public class CharacterController : MonoBehaviour
             return GameObject.Scene.Physics.Overlap(hull, Quaternion.Identity, position + Center, results, Filter);
         }
 
+        if (Shape == ColliderShape.Sphere)
+        {
+            Float3 sphereCenter = position + Center + new Float3(0, GetEffectiveSphereRadius(), 0);
+            return GameObject.Scene.Physics.OverlapSphere(sphereCenter, GetEffectiveSphereRadius(), results, Filter);
+        }
+
+        if (Shape == ColliderShape.Box)
+        {
+            Float3 center = position + Center + Size * 0.5f;
+            return GameObject.Scene.Physics.OverlapBox(center, Size, Quaternion.Identity, results, Filter);
+        }
+
         if (Shape == ColliderShape.Capsule)
         {
             return GameObject.Scene.Physics.OverlapCapsule(
@@ -317,7 +334,7 @@ public class CharacterController : MonoBehaviour
         }
 
         return GameObject.Scene.Physics.OverlapCylinder(
-            GetShapeCenter(position), GetEffectiveRadius(), Height, Quaternion.Identity, results, Filter);
+            GetShapeCenter(position), GetEffectiveRadius(), GetEffectiveHeight(), Quaternion.Identity, results, Filter);
     }
 
     /// <summary>
@@ -367,91 +384,43 @@ public class CharacterController : MonoBehaviour
     }
 
     /// <summary>
-    /// Attempts to set the height of the collider.
-    /// Returns true if successful, false if the new size would collide with something.
+    /// Intenta cambiar el tamano del colisionador. Devuelve true si el nuevo tamano no
+    /// colisiona con nada existente en la posicion actual.
     /// </summary>
-    public bool TrySetHeight(float newHeight)
+    public bool TrySetSize(Float3 newSize)
     {
-        float minHeight = Shape == ColliderShape.Capsule ? Radius * 2 : 0.1f;
-        if (newHeight <= minHeight)
-        {
-            failedHeightAttempt = false;
-            return false;
-        }
+        if (newSize.X <= 0 || newSize.Y <= 0 || newSize.Z <= 0) return false;
+        if (Shape == ColliderShape.Capsule && newSize.Y < newSize.X && newSize.Y < newSize.Z) return false;
 
         Float3 position = GameObject.Transform.Position;
-        bool wouldCollide = CheckShapeOverlap(position, newHeight, Radius);
-
-        if (!wouldCollide)
+        if (!CheckShapeOverlap(position, newSize))
         {
-            Height = newHeight;
-            failedHeightAttempt = false;
+            Size = newSize;
             return true;
         }
-
-        // Store failed attempt for debug visualization
-        failedHeightAttempt = true;
-        failedAttemptHeight = newHeight;
-        failedAttemptRadius = Radius;
-
-        return false;
-    }
-
-    /// <summary>
-    /// Attempts to set the radius of the collider.
-    /// Returns true if successful, false if the new size would collide with something.
-    /// </summary>
-    public bool TrySetRadius(float newRadius)
-    {
-        if (newRadius <= 0)
-            return false;
-
-        if (Shape == ColliderShape.Capsule && newRadius * 2 >= Height)
-            return false;
-
-        Float3 position = GameObject.Transform.Position;
-        bool wouldCollide = CheckShapeOverlap(position, Height, newRadius);
-
-        if (!wouldCollide)
-        {
-            Radius = newRadius;
-            return true;
-        }
-
         return false;
     }
 
     /// <summary>
     /// Checks if a shape with the given dimensions would overlap with anything.
     /// </summary>
-    private bool CheckShapeOverlap(Float3 position, float height, float radius)
+    private bool CheckShapeOverlap(Float3 position, Float3 size)
     {
-        float effectiveRadius = radius - SkinWidth;
-        Float3 origin = position + Center;
-
-        if (Shape == ColliderShape.Mesh)
+        Float3 prevSize = Size;
+        Size = size;
+        try
         {
-            var hull = ResolveMeshShape();
-            if (hull == null) return false;
-            var hits = new List<ShapeCastHit>();
-            return GameObject.Scene.Physics.Overlap(hull, Quaternion.Identity, position + Center, hits, Filter) > 0;
+            var tempHits = new List<ShapeCastHit>();
+            return OverlapShape(position, tempHits) > 0;
         }
-
-        if (Shape == ColliderShape.Capsule)
+        finally
         {
-            Float3 bottom = origin + new Float3(0, radius, 0);
-            Float3 top = origin + new Float3(0, height - radius, 0);
-            return GameObject.Scene.Physics.CheckCapsule(bottom, top, effectiveRadius, Filter);
-        }
-        else // Cylinder
-        {
-            Float3 center = origin + new Float3(0, height * 0.5f, 0);
-            return GameObject.Scene.Physics.CheckCylinder(center, effectiveRadius, height, Quaternion.Identity, Filter);
+            Size = prevSize;
         }
     }
 
     // The controller stands on its origin, so its centre is half a height up whatever the shape.
-    private Float3 GetShapeCenter(Float3 position) => position + Center + new Float3(0, Height * 0.5f, 0);
+    private Float3 GetShapeCenter(Float3 position) => position + Center + new Float3(0, Size.Y * 0.5f, 0);
 
     private Float3 GetCapsuleBottom(Float3 position)
     {
@@ -460,17 +429,16 @@ public class CharacterController : MonoBehaviour
 
     private Float3 GetCapsuleTop(Float3 position)
     {
-        // Keep the segment non-degenerate: Jitter rejects a capsule of zero length outright, and a
-        // Height at or below twice the radius would produce one.
         float radius = GetEffectiveRadius();
-        return position + Center + new Float3(0, Maths.Max(Height - radius, radius + 0.001f), 0);
+        return position + Center + new Float3(0, Maths.Max(Size.Y - radius, radius + 0.001f), 0);
     }
 
     // Shape dimensions must stay positive; Jitter throws on a zero or negative radius.
-    private float GetEffectiveRadius()
-    {
-        return Maths.Max(Radius - SkinWidth, 0.001f);
-    }
+    private float GetRadius() => Maths.Min(Size.X, Size.Z) * 0.5f;
+    private float GetSphereRadius() => Maths.Min(Size.X, Maths.Min(Size.Y, Size.Z)) * 0.5f;
+    private float GetEffectiveRadius() => Maths.Max(GetRadius() - SkinWidth, 0.001f);
+    private float GetEffectiveSphereRadius() => Maths.Max(GetSphereRadius() - SkinWidth, 0.001f);
+    private float GetEffectiveHeight() => Maths.Max(Size.Y - SkinWidth * 2, 0.001f);
 
     /// <summary>
     /// Devuelve un ConvexHullShape de la malla del MeshRenderer hermano, escalado por
@@ -480,7 +448,11 @@ public class CharacterController : MonoBehaviour
     private ConvexHullShape? ResolveMeshShape()
     {
         Float3 currentScale = Transform.LossyScale;
-        if (_cachedMeshShape != null && _cachedMeshScale.Equals(currentScale))
+        Float3 combinedScale = new Float3(
+            currentScale.X * Size.X,
+            currentScale.Y * Size.Y,
+            currentScale.Z * Size.Z);
+        if (_cachedMeshShape != null && _cachedMeshScale.Equals(combinedScale))
             return _cachedMeshShape;
 
         var mr = GetComponent<MeshRenderer>();
@@ -494,18 +466,17 @@ public class CharacterController : MonoBehaviour
         var baked = PhysicsWorld.BakeMesh(m);
         if (baked.Triangles.Count == 0) return null;
 
-        // Escalar los vértices del hull por LossyScale para que la colisión siga al Transform
         var scaledTris = new List<JTriangle>(baked.Triangles.Count);
         foreach (var tri in baked.Triangles)
         {
             scaledTris.Add(new JTriangle(
-                ScaleVector(tri.V0, currentScale),
-                ScaleVector(tri.V1, currentScale),
-                ScaleVector(tri.V2, currentScale)));
+                ScaleVector(tri.V0, combinedScale),
+                ScaleVector(tri.V1, combinedScale),
+                ScaleVector(tri.V2, combinedScale)));
         }
 
         _cachedMeshShape = new ConvexHullShape(scaledTris);
-        _cachedMeshScale = currentScale;
+        _cachedMeshScale = combinedScale;
         return _cachedMeshShape;
     }
 
@@ -524,6 +495,18 @@ public class CharacterController : MonoBehaviour
             return GameObject.Scene.Physics.ShapeCast(hull, Quaternion.Identity, position + Center, direction, distance, out hitInfo, Filter);
         }
 
+        if (Shape == ColliderShape.Sphere)
+        {
+            Float3 sphereCenter = position + Center + new Float3(0, GetEffectiveSphereRadius(), 0);
+            return GameObject.Scene.Physics.SphereCast(sphereCenter, GetEffectiveSphereRadius(), direction, distance, out hitInfo, Filter);
+        }
+
+        if (Shape == ColliderShape.Box)
+        {
+            Float3 center = position + Center + Size * 0.5f;
+            return GameObject.Scene.Physics.BoxCast(center, Size, Quaternion.Identity, direction, distance, out hitInfo, Filter);
+        }
+
         if (Shape == ColliderShape.Capsule)
         {
             return GameObject.Scene.Physics.CapsuleCast(
@@ -533,22 +516,19 @@ public class CharacterController : MonoBehaviour
                 direction,
                 distance,
                 out hitInfo,
-                Filter
-            );
+                Filter);
         }
-        else // Cylinder
-        {
-            return GameObject.Scene.Physics.CylinderCast(
-                GetShapeCenter(position),
-                GetEffectiveRadius(),
-                Height,
-                Quaternion.Identity,
-                direction,
-                distance,
-                out hitInfo,
-                Filter
-            );
-        }
+
+        // Cylinder
+        return GameObject.Scene.Physics.CylinderCast(
+            GetShapeCenter(position),
+            GetEffectiveRadius(),
+            GetEffectiveHeight(),
+            Quaternion.Identity,
+            direction,
+            distance,
+            out hitInfo,
+            Filter);
     }
 
     private Float3 CollideAndSlide(Float3 position, Float3 velocity, int depth, bool grounded)
@@ -743,7 +723,6 @@ public class CharacterController : MonoBehaviour
     public override void DrawGizmos()
     {
         if (GameObject.Scene.Physics == null) return;
-
         Float3 position = GameObject.Transform.Position;
 
         if (Shape == ColliderShape.Mesh)
@@ -764,35 +743,25 @@ public class CharacterController : MonoBehaviour
                 }
             }
         }
+        else if (Shape == ColliderShape.Sphere)
+        {
+            Float3 sphereCenter = position + Center + new Float3(0, GetSphereRadius(), 0);
+            Debug.DrawWireSphere(sphereCenter, GetSphereRadius(), Color.Cyan, 16);
+        }
+        else if (Shape == ColliderShape.Box)
+        {
+            Float3 center = position + Center + Size * 0.5f;
+            Debug.DrawWireCube(center, Size * 0.5f, Color.Cyan);
+        }
         else if (Shape == ColliderShape.Capsule)
         {
-            Debug.DrawWireCapsule(GetCapsuleBottom(position), GetCapsuleTop(position), Radius, Color.Cyan, 16);
+            Debug.DrawWireCapsule(GetCapsuleBottom(position), GetCapsuleTop(position), GetRadius(), Color.Cyan, 16);
         }
         else // Cylinder
         {
-            Debug.DrawWireCylinder(GetShapeCenter(position), Quaternion.Identity, Radius, Height, Color.Cyan, 16);
+            Debug.DrawWireCylinder(GetShapeCenter(position), Quaternion.Identity, GetRadius(), Size.Y, Color.Cyan, 16);
         }
 
-        // Draw ground hit if grounded
-        if (lastGroundHit.Hit)
-        {
-            lastGroundHit.DrawGizmos();
-        }
-
-        // Draw failed height attempt in red
-        if (failedHeightAttempt)
-        {
-            if (Shape == ColliderShape.Capsule)
-            {
-                Float3 bottom = position + new Float3(0, failedAttemptRadius, 0);
-                Float3 top = position + new Float3(0, failedAttemptHeight - failedAttemptRadius, 0);
-                Debug.DrawWireCapsule(bottom, top, failedAttemptRadius, Color.Red, 16);
-            }
-            else // Cylinder
-            {
-                Float3 center = position + new Float3(0, failedAttemptHeight * 0.5f, 0);
-                Debug.DrawWireCylinder(center, Quaternion.Identity, failedAttemptRadius, failedAttemptHeight, Color.Red, 16);
-            }
-        }
+        if (lastGroundHit.Hit) lastGroundHit.DrawGizmos();
     }
 }
