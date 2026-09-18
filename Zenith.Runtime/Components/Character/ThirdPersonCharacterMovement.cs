@@ -21,7 +21,7 @@ public class ThirdPersonCharacterMovement : MonoBehaviour
     [Header("Movement")]
     public float WalkSpeed = 5f;
     public float RunSpeed = 8f;
-    public float TurnSpeed = 12f;
+    public float TurnSpeed = 6f;
 
     [Header("Model")]
     public Transform ModelRoot;

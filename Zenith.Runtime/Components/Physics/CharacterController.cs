@@ -202,10 +202,10 @@ public class CharacterController : MonoBehaviour
     public Float3 WorldCenter => GetShapeCenter(GameObject.Transform.Position);
 
     /// <summary>The bottom of the controller in world space, which is where it stands.</summary>
-    public Float3 Bottom => GameObject.Transform.Position + Center;
+    public Float3 Bottom => GameObject.Transform.Position + Center - new Float3(0, Size.Y * 0.5f, 0);
 
     /// <summary>The top of the controller in world space.</summary>
-    public Float3 Top => GameObject.Transform.Position + Center + new Float3(0, Size.Y, 0);
+    public Float3 Top => GameObject.Transform.Position + Center + new Float3(0, Size.Y * 0.5f, 0);
 
     /// <summary>
     /// Moves the character controller by the specified motion vector, sliding along whatever it
@@ -348,13 +348,13 @@ public class CharacterController : MonoBehaviour
 
         if (Shape == ColliderShape.Sphere)
         {
-            Float3 sphereCenter = position + Center + new Float3(0, GetEffectiveSphereRadius(), 0);
+            Float3 sphereCenter = position + Center;
             return GameObject.Scene.Physics.OverlapSphere(sphereCenter, GetEffectiveSphereRadius(), results, Filter);
         }
 
         if (Shape == ColliderShape.Box)
         {
-            Float3 center = position + Center + Size * 0.5f;
+            Float3 center = position + Center;
             return GameObject.Scene.Physics.OverlapBox(center, Size, Quaternion.Identity, results, Filter);
         }
 
@@ -451,17 +451,22 @@ public class CharacterController : MonoBehaviour
     }
 
     // The controller stands on its origin, so its centre is half a height up whatever the shape.
-    private Float3 GetShapeCenter(Float3 position) => position + Center + new Float3(0, Size.Y * 0.5f, 0);
+    private Float3 GetShapeCenter(Float3 position) => position + Center;
 
     private Float3 GetCapsuleBottom(Float3 position)
     {
-        return position + Center + new Float3(0, GetEffectiveRadius(), 0);
+        float radius = GetEffectiveRadius();
+        float half = Size.Y * 0.5f;
+        float innerHalf = Maths.Max(half - radius, 0.001f);
+        return position + Center - new Float3(0, innerHalf, 0);
     }
 
     private Float3 GetCapsuleTop(Float3 position)
     {
         float radius = GetEffectiveRadius();
-        return position + Center + new Float3(0, Maths.Max(Size.Y - radius, radius + 0.001f), 0);
+        float half = Size.Y * 0.5f;
+        float innerHalf = Maths.Max(half - radius, 0.001f);
+        return position + Center + new Float3(0, innerHalf, 0);
     }
 
     // Shape dimensions must stay positive; Jitter throws on a zero or negative radius.
@@ -528,13 +533,13 @@ public class CharacterController : MonoBehaviour
 
         if (Shape == ColliderShape.Sphere)
         {
-            Float3 sphereCenter = position + Center + new Float3(0, GetEffectiveSphereRadius(), 0);
+            Float3 sphereCenter = position + Center;
             return GameObject.Scene.Physics.SphereCast(sphereCenter, GetEffectiveSphereRadius(), direction, distance, out hitInfo, Filter);
         }
 
         if (Shape == ColliderShape.Box)
         {
-            Float3 center = position + Center + Size * 0.5f;
+            Float3 center = position + Center;
             return GameObject.Scene.Physics.BoxCast(center, Size, Quaternion.Identity, direction, distance, out hitInfo, Filter);
         }
 
@@ -833,12 +838,12 @@ public class CharacterController : MonoBehaviour
         }
         else if (Shape == ColliderShape.Sphere)
         {
-            Float3 sphereCenter = position + Center + new Float3(0, GetSphereRadius(), 0);
+            Float3 sphereCenter = position + Center;
             Debug.DrawWireSphere(sphereCenter, GetSphereRadius(), Color.Cyan, 16);
         }
         else if (Shape == ColliderShape.Box)
         {
-            Float3 center = position + Center + Size * 0.5f;
+            Float3 center = position + Center;
             Debug.DrawWireCube(center, Size * 0.5f, Color.Cyan);
         }
         else if (Shape == ColliderShape.Capsule)

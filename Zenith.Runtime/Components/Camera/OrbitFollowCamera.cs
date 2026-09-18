@@ -19,9 +19,9 @@ public class OrbitFollowCamera : MonoBehaviour
     [Header("Orbit")]
     public OrbitMode Mode = OrbitMode.HoldRightClick;
     public float Distance = 5f;
-    public float Sensitivity = 0.15f;
-    public float HoldModeSensitivityMultiplier = 2.5f;
-    public float RotationSmoothing = 30f;
+    public float Sensitivity = 0.08f;
+    public float HoldModeSensitivityMultiplier = 1.8f;
+    public float RotationSmoothing = 22f;
     public float MinPitch = -18f;
     public float MaxPitch = 36f;
 
@@ -73,7 +73,17 @@ public class OrbitFollowCamera : MonoBehaviour
         }
 
         // 1. Leer input y actualizar yaw/pitch
-        bool shouldOrbit = Mode == OrbitMode.LockedCursor || Input.GetMouseButton(1);
+        bool shouldOrbit;
+        if (Mode == OrbitMode.LockedCursor)
+        {
+            // Solo orbitar si el cursor esta efectivamente locked
+            shouldOrbit = Input.CursorLockState == CursorLockMode.Locked;
+        }
+        else
+        {
+            // HoldRightClick: solo orbitar mientras el boton derecho esta pulsado
+            shouldOrbit = Input.GetMouseButton(1);
+        }
         if (shouldOrbit)
         {
             float mult = Mode == OrbitMode.HoldRightClick ? HoldModeSensitivityMultiplier : 1f;
