@@ -171,6 +171,30 @@ public sealed class MeshCollider : Collider
         base.Rebuild();
     }
 
+    /// <summary>
+    /// Un TriangleMesh (Convex=false) no tiene volumen, así que su masa e inercia
+    /// se calculan mal y los impulsos no se aplican bien. Cuando el MeshCollider
+    /// cuelga de un Rigidbody3D dinámico, forzamos Convex=true con un warning.
+    /// Es una limitación inherente a la física, no un bug.
+    /// </summary>
+    private void AutoCorrectConvex()
+    {
+        if (convex) return;
+
+        Rigidbody3D rb = GetComponentInParent<Rigidbody3D>();
+        if (rb.IsNotValid()) return;
+        if (rb.MotionType != Jitter2.Dynamics.MotionType.Dynamic) return;
+
+        Debug.LogWarning(
+            $"MeshCollider on '{GameObject.Name}' is concave (Convex=false) but sits on a " +
+            $"dynamic Rigidbody3D. Auto-switching to Convex=true because a TriangleMesh has no " +
+            $"volume, which breaks mass, inertia and impulse application. " +
+            $"Set Convex=true manually to silence this warning, or use a Static Rigidbody if " +
+            $"you need a concave collider.");
+
+        convex = true;
+    }
+
     public override void OnEnable()
     {
         if (mesh.Res == null)
@@ -181,6 +205,8 @@ public sealed class MeshCollider : Collider
             else
                 Debug.LogWarning("MeshCollider could not find a MeshRenderer to get the mesh from.");
         }
+
+        AutoCorrectConvex();
 
         base.OnEnable();
     }

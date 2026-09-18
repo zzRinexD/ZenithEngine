@@ -41,6 +41,7 @@ public sealed class Rigidbody3D : MonoBehaviour
     }
 
     [SerializeField] private MotionType motionType = MotionType.Dynamic;
+    [SerializeField] private bool isPushable = false;
     [SerializeField] private bool isSpeculative;
     [SerializeField] private bool useGravity = true;
     [SerializeField] private bool enableGyroscopicForces = false;
@@ -153,6 +154,17 @@ public sealed class Rigidbody3D : MonoBehaviour
             mass = value;
             ApplyMassInertia();
         }
+    }
+
+    /// <summary>
+    /// Si es true, el CharacterController puede empujar este cuerpo al chocar con él.
+    /// Si es false, el cuerpo se comporta como un muro inamovible desde la perspectiva
+    /// del personaje (aunque siga siendo dinámico y le afecte la gravedad).
+    /// </summary>
+    public bool IsPushable
+    {
+        get => isPushable;
+        set { isPushable = value; }
     }
 
     /// <summary>

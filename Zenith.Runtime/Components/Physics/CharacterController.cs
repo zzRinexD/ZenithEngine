@@ -62,6 +62,25 @@ public class CharacterController : MonoBehaviour
 
     public float SkinWidth = 0.02f;
 
+    /// <summary>
+    /// Fuerza de empuje que el personaje puede ejercer contra objetos con
+    /// Rigidbody3D.IsPushable activado. Valor por defecto: 2.
+    /// </summary>
+    public float PushForce = 2f;
+
+    /// <summary>
+    /// Multiplicador aplicado a PushForce para decidir si el objeto es
+    /// empujable. La regla es: si (PushForce * PushForceMultiplier) &lt; masa
+    /// del objeto, el personaje no lo mueve. Valor por defecto: 10.
+    /// </summary>
+    public float PushForceMultiplier = 10f;
+
+    /// <summary>
+    /// Masa virtual del personaje, usada para calcular el retroceso por la
+    /// tercera ley de Newton. Valor por defecto: 70 (masa promedio humana).
+    /// </summary>
+    public float PlayerMass = 70f;
+
     [SerializeIgnore] private ConvexHullShape? _cachedMeshShape;
     [SerializeIgnore] private Float3 _cachedMeshScale = Float3.Zero;
 
@@ -148,6 +167,7 @@ public class CharacterController : MonoBehaviour
     private readonly List<ShapeCastHit> _overlaps = new();
     private CollisionFlags _flags;
     private Float3 _achievedVelocity;
+    private Float3 _pendingRecoil = Float3.Zero;
 
     /// <summary>
     /// Everything the last <see cref="Move"/> touched, in the order it was touched, including
@@ -200,6 +220,15 @@ public class CharacterController : MonoBehaviour
         Float3 start = GameObject.Transform.Position;
         lastVelocity = motion;
 
+        // Aplicar retroceso acumulado del frame anterior (3ra ley de Newton).
+        // Se suma al motion antes de cualquier colisión para que el personaje
+        // se mueva ligeramente hacia atrás cuando empuja algo pesado.
+        if (Float3.LengthSquared(_pendingRecoil) > 0.0001f)
+        {
+            motion += _pendingRecoil;
+            _pendingRecoil = Float3.Zero;
+        }
+
         // Anything the controller is already inside stops every cast below at zero distance, so it
         // could neither move nor slide out. Push clear of it first, which is what a slope resting on
         // a hair of penetration needs to stay movable.
@@ -228,6 +257,8 @@ public class CharacterController : MonoBehaviour
         // frame, so callers see an up-to-date value on the next frame
         // (e.g. right after a jump leaves the ground).
         UpdateGroundedState(finalPosition);
+
+        ApplyPushes(motion);
 
         if (IsGrounded) _flags |= CollisionFlags.Below;
         return _flags;
@@ -529,6 +560,63 @@ public class CharacterController : MonoBehaviour
             distance,
             out hitInfo,
             Filter);
+    }
+
+    /// <summary>
+    /// Recorre los hits del último Move y aplica un impulso a cada Rigidbody3D
+    /// con IsPushable activado. El impulso se aplica en el punto de contacto
+    /// para generar torque natural (esferas ruedan, cajas vuelcan). El
+    /// retroceso se acumula en _pendingRecoil para aplicarse al siguiente frame.
+    /// </summary>
+    private void ApplyPushes(Float3 motion)
+    {
+        // Velocidad horizontal del personaje en el frame actual
+        float dt = Maths.Max(Time.DeltaTime, 0.0001f);
+        Float3 horizontalMotion = new Float3(motion.X, 0, motion.Z);
+        float playerSpeed = Float3.Length(horizontalMotion) / dt;
+        if (playerSpeed < 0.01f) return;
+
+        // Precalcular direccion de movimiento normalizada
+        Float3 moveDir = Float3.Normalize(horizontalMotion);
+
+        foreach (ShapeCastHit hit in _hits)
+        {
+            Rigidbody3D rb = hit.Rigidbody;
+            if (rb.IsNotValid()) continue;
+            if (!rb.IsPushable) continue;
+            if (rb.MotionType == Jitter2.Dynamics.MotionType.Static) continue;
+
+            // Regla: si la fuerza del personaje no supera la inercia, no se mueve
+            float pushCapacity = PushForce * PushForceMultiplier;
+            if (pushCapacity < rb.Mass) continue;
+
+            // Despertar el cuerpo si esta dormido
+            rb.SetActive(true);
+
+            // Direccion: opuesta a la normal del contacto, proyectada al plano horizontal
+            Float3 pushDir = -hit.Normal;
+            pushDir.Y = 0;
+            if (Float3.LengthSquared(pushDir) < 0.0001f)
+            {
+                // Si la normal era casi vertical, usar la direccion de movimiento
+                pushDir = moveDir;
+            }
+            else
+            {
+                pushDir = Float3.Normalize(pushDir);
+            }
+
+            // Magnitud del impulso: PushForce * velocidad del personaje * dt
+            float impulseMag = PushForce * playerSpeed * dt;
+            Float3 impulse = pushDir * impulseMag;
+
+            // Aplicar en el punto de contacto (genera torque natural)
+            rb.ApplyImpulse(impulse, hit.Point);
+
+            // Retroceso (3ra ley de Newton): la reaccion sobre el personaje
+            float recoilFactor = rb.Mass / PlayerMass;
+            _pendingRecoil += -pushDir * impulseMag * recoilFactor;
+        }
     }
 
     private Float3 CollideAndSlide(Float3 position, Float3 velocity, int depth, bool grounded)
