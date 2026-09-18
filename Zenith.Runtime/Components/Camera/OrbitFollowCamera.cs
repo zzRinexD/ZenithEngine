@@ -17,17 +17,17 @@ public class OrbitFollowCamera : MonoBehaviour
     public float TargetHeight = 1.5f;
 
     [Header("Orbit")]
-    public OrbitMode Mode = OrbitMode.HoldRightClick;
-    public float Distance = 5f;
-    public float Sensitivity = 0.08f;
+    public OrbitMode Mode = OrbitMode.LockedCursor;
+    public float Distance = 6f;
+    public float Sensitivity = 0.13f;
     public float HoldModeSensitivityMultiplier = 1.8f;
-    public float RotationSmoothing = 22f;
+    public float RotationSmoothing = 18f;
     public float MinPitch = -18f;
     public float MaxPitch = 36f;
 
     [Header("Follow")]
-    public float FollowSmoothing = 12f;
-    public float ChestOffset = 1.2f;
+    public float FollowSmoothing = 10f;
+    public float ChestOffset = 1.0f;
 
     [Header("Collision")]
     public bool CollisionEnabled = false;

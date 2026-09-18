@@ -89,7 +89,7 @@ public class ColorRamp
 public class EditorThemeData
 {
     /// <summary> Display name of this theme. </summary>
-    public string Name { get; set; } = "Indigo";
+    public string Name { get; set; } = "Graphite";
 
     // Color ramps (customization overlaid onto Origami's defaults). Primary = the bright ★ C500 stop.
     /// <summary> Neutral color ramp for backgrounds and surfaces. </summary>

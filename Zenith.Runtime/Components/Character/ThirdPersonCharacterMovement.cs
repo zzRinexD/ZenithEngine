@@ -18,14 +18,21 @@ public class ThirdPersonCharacterMovement : MonoBehaviour
     public OrbitFollowCamera Camera;
     public CharacterController Controller;
 
+    [Header("Feel")]
+    public float Acceleration = 25f;
+    public float Deceleration = 30f;
+
     [Header("Movement")]
     public float WalkSpeed = 5f;
     public float RunSpeed = 8f;
-    public float TurnSpeed = 6f;
+    public float TurnSpeed = 12f;
 
     [Header("Model")]
     public Transform ModelRoot;
     public ModelFacing Facing = ModelFacing.Forward_Z;
+
+    [Header("Orientation")]
+    public bool StrafeMode = false;
 
     [Header("Input")]
     public float MovementThreshold = 0.05f;
@@ -34,6 +41,7 @@ public class ThirdPersonCharacterMovement : MonoBehaviour
     public float Gravity = -20f;
     public float JumpForce = 8f;
     private float _verticalVelocity;
+    private Float3 _currentHorizontalVelocity = Float3.Zero;
 
     public override void Update()
     {
@@ -60,34 +68,69 @@ public class ThirdPersonCharacterMovement : MonoBehaviour
         Float3 moveDir = flatF * inputY + flatR * inputX;
         float mag = Float3.Length(moveDir);
 
-        // Gravedad: solo acumular cuando NO esta grounded
-        if (Controller.IsGrounded)
+        // Guardar si estaba grounded ANTES de este move
+        bool wasGrounded = Controller.IsGrounded;
+
+        if (wasGrounded)
         {
-            // Pegado al suelo: velocidad vertical pequena y negativa
+            // Pegado al suelo con una velocidad muy pequena (evita penetrar)
             if (_verticalVelocity < 0f)
-                _verticalVelocity = -2f;
+                _verticalVelocity = -0.5f;
         }
         else
         {
             _verticalVelocity += Gravity * Time.DeltaTime;
-            // Terminal velocity: limitar la caida para no atravesar el suelo
             if (_verticalVelocity < -50f)
                 _verticalVelocity = -50f;
         }
 
-        Float3 horizontalMotion = Float3.Zero;
+        Float3 targetVelocity = Float3.Zero;
         if (mag > MovementThreshold)
         {
             moveDir = Float3.Normalize(moveDir);
-            horizontalMotion = moveDir * WalkSpeed * Time.DeltaTime;
+            targetVelocity = moveDir * WalkSpeed;
         }
 
-        Float3 verticalMotion = new Float3(0, _verticalVelocity * Time.DeltaTime, 0);
+        float dtMove = Time.DeltaTime;
+        float accelRate = targetVelocity == Float3.Zero ? Deceleration : Acceleration;
+        float tVel = 1f - MathF.Exp(-accelRate * dtMove);
+        _currentHorizontalVelocity = new Float3(
+            Maths.Lerp(_currentHorizontalVelocity.X, targetVelocity.X, tVel),
+            Maths.Lerp(_currentHorizontalVelocity.Y, targetVelocity.Y, tVel),
+            Maths.Lerp(_currentHorizontalVelocity.Z, targetVelocity.Z, tVel)
+        );
+
+        Float3 horizontalMotion = _currentHorizontalVelocity * dtMove;
+
+        // Clampear el desplazamiento vertical para evitar penetracion
+        float verticalStep = _verticalVelocity * Time.DeltaTime;
+        float maxVerticalStep = 0.5f;
+        if (verticalStep < -maxVerticalStep) verticalStep = -maxVerticalStep;
+        if (verticalStep > maxVerticalStep) verticalStep = maxVerticalStep;
+        Float3 verticalMotion = new Float3(0, verticalStep, 0);
+
+
         Controller.Move(horizontalMotion + verticalMotion);
 
-        if (mag > MovementThreshold)
+        // Solo rotar el modelo cuando hay componente forward en el input.
+        // Puro A/D (strafe) o puro S (backpedal) no cambian la orientacion.
+        // W, W+A, W+D, W+S(no aplica) si rotan.
+        bool shouldRotate;
+        if (StrafeMode)
         {
-            Float3 lookDir = moveDir;
+            // En Strafe el personaje siempre mira hacia donde mira la camara
+            shouldRotate = true;
+        }
+        else
+        {
+            // En FaceMovement solo rotar si hay input forward o diagonales con forward
+            shouldRotate = inputY > 0.01f;
+        }
+
+        if (shouldRotate)
+        {
+            Float3 lookDir = StrafeMode ? flatF : moveDir;
+
             Quaternion targetRotation = Quaternion.LookRotation(lookDir, Float3.UnitY);
 
             float offsetDeg = Facing switch
@@ -108,9 +151,13 @@ public class ThirdPersonCharacterMovement : MonoBehaviour
 
     public override void DrawGizmos()
     {
-        if (ModelRoot == null) return;
-        Float3 pos = ModelRoot.Position;
-        Float3 forward = ModelRoot.Rotation * Float3.UnitZ;
-        Debug.DrawLine(pos, pos + forward * 1.5f, Color.Blue);
+        Transform model = ModelRoot != null ? ModelRoot : Transform;
+        Float3 pos = model.Position;
+        Float3 forward = model.Rotation * Float3.UnitZ;
+        Float3 right = model.Rotation * Float3.UnitX;
+        Float3 up = model.Rotation * Float3.UnitY;
+        Debug.DrawLine(pos, pos + forward * 1.5f, Color.Blue);   // frente
+        Debug.DrawLine(pos, pos + right * 1.5f, Color.Red);      // derecha
+        Debug.DrawLine(pos, pos + up * 1.5f, Color.Green);       // arriba
     }
 }
