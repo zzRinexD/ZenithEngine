@@ -652,7 +652,23 @@ public static class ProjectLauncher
         string targetPath = Path.Combine(_newProjectPath, name);
         if (Directory.Exists(targetPath) && Directory.GetFileSystemEntries(targetPath).Length > 0)
         {
-            Toasts.Show(Loc.Get("launcher.folder_exists"), Loc.Get("launcher.folder_exists_msg", new { name }), ToastType.Error, 5f);
+            Origami.Confirm(
+                Loc.Get("launcher.overwrite_title"),
+                Loc.Get("launcher.overwrite_body", new { name }),
+                () =>
+                {
+                    try
+                    {
+                        Directory.Delete(targetPath, true);
+                        var project = Project.Create(_newProjectPath, name);
+                        project.SetActive();
+                        Close();
+                    }
+                    catch (Exception ex)
+                    {
+                        Toasts.Show(Loc.Get("launcher.create_failed"), ex.Message, ToastType.Error, 5f);
+                    }
+                });
             return;
         }
 

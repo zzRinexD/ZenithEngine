@@ -248,6 +248,8 @@
   "launcher.delete_project": "Eliminar proyecto",
   "launcher.delete_confirm_title": "Eliminar proyecto?",
   "launcher.delete_confirm_body": "Eliminar permanentemente \"{{name}}\" y todos sus archivos?\nEsta accion no se puede deshacer.",
+  "launcher.overwrite_title": "Sobrescribir proyecto",
+  "launcher.overwrite_body": "Ya existe una carpeta llamada '{{name}}'. ¿Deseas eliminarla y crear un nuevo proyecto? Esta acción no se puede deshacer.",
   "launcher.choose_template": "Elegir una plantilla",
   "launcher.configure": "CONFIGURAR",
   "launcher.create_project": "Crear proyecto",

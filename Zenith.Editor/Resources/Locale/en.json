@@ -254,6 +254,8 @@
   "launcher.delete_project": "Delete Project",
   "launcher.delete_confirm_title": "Delete Project?",
   "launcher.delete_confirm_body": "Permanently delete \"{{name}}\" and all its files?\nThis cannot be undone.",
+  "launcher.overwrite_title": "Overwrite project",
+  "launcher.overwrite_body": "A folder named '{{name}}' already exists. Do you want to delete it and create a new project? This cannot be undone.",
   "launcher.choose_template": "Choose a Template",
   "launcher.configure": "CONFIGURE",
   "launcher.create_project": "Create Project",
