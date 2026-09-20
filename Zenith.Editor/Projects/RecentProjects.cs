@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 
+using Prowl.Editor.Core;
+
 namespace Prowl.Editor.Projects;
 
 /// <summary> Represents a single entry in the recent projects list. </summary>
@@ -22,9 +24,7 @@ public static class RecentProjects
 {
     private const int MaxRecent = 20;
 
-    private static readonly string _filePath = System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "Prowl", "RecentProjects.json");
+    private static readonly string _filePath = Core.EditorPaths.RecentProjectsFile;
 
     private static List<RecentProjectEntry>? _entries;
 

@@ -9,7 +9,7 @@ using Prowl.Runtime;
 namespace Prowl.Editor.Theming;
 
 /// <summary>
-/// Global editor settings. Saved to AppData/Prowl/EditorSettings.json.
+/// Global editor settings. Saved to AppData/Zenith/EditorSettings.json.
 /// Persists across projects. Contains preferences and the active theme.
 /// </summary>
 public class EditorSettings
@@ -17,9 +17,7 @@ public class EditorSettings
     private static EditorSettings? _instance;
     public static EditorSettings Instance => _instance ??= Load();
 
-    private static readonly string _filePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "Prowl", "EditorSettings.json");
+    private static readonly string _filePath = Core.EditorPaths.EditorSettingsFile;
 
     // Preferences
     /// <summary> Gets or sets the default directory for new projects. Defaults to Documents/ProwlProjects. </summary>

@@ -129,6 +129,8 @@ public static class Program
 
         EditorApplication.SkipIntro = skipIntro;
 
+        Prowl.Editor.Core.EditorPaths.MigrateLegacyData();
+
         var editor = new EditorApplication();
         editor.Run("Zenith Engine", 1920, 1080);
 
