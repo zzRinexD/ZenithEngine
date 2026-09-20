@@ -23,7 +23,7 @@ public static class ScriptAssemblyManager
 {
     private static bool _recompileRequested;
     private static DateTime _lastScriptChange;
-    private static bool _isCompiling;
+    private static volatile bool _isCompiling;
     private static readonly object _pendingLock = new();
     private static ScriptCompiler.CompileResult? _pendingResult; // published cross-thread under _pendingLock
     private static DateTime _compileStartedUtc; // when the in-flight compile began, for the summary timing
@@ -80,6 +80,9 @@ public static class ScriptAssemblyManager
             yield return asm;
         }
     }
+
+    /// <summary>True mientras hay una compilacion de scripts en curso.</summary>
+    public static bool IsCompiling => _isCompiling;
 
     /// <summary>Pending-recompile flag, so tests can assert that a change asked for one.</summary>
     internal static bool RecompilePending { get => _recompileRequested; set => _recompileRequested = value; }

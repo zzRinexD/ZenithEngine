@@ -42,6 +42,8 @@ public class EditorApplication : Game
     private const double IntroCloseDuration = 2.0; // bars close over launcher
     private const double IntroOpenDuration = 3.0;  // bars open revealing editor
     private const double IntroDuration = 5.0;      // total
+    private float _introProgress = 0f;
+    private float _finishDelay = 0f;
     private bool _introClosing; // true = closing phase (bars sliding in)
     private bool _launcherWasOpen = true;
     private bool _wasFocused = true;
@@ -427,6 +429,8 @@ public class EditorApplication : Game
         if (!ProjectLauncher.IsOpen && !_introClosing && _launcherWasOpen)
         {
             _introTime = 0;
+            _introProgress = 0f;
+            _finishDelay = 0f;
             _introClosing = true;
             _launcherWasOpen = false;
             GUI.EditorGuide.ArmAutoStart(); // let the tour play once for this freshly-opened project
@@ -1068,6 +1072,39 @@ public class EditorApplication : Game
                 var black = Prowl.Vector.Color32.FromArgb(255, 8, 8, 10);
                 float barH = (float)h / BarCount;
                 double time = _introTime;
+                bool compiling = ScriptAssemblyManager.IsCompiling;
+
+                // Garantizar una duracion minima visible. Si no hay compilacion en curso,
+                // la barra debe avanzar de 0 a 100% en al menos MinIntroDuration segundos.
+                const float MinIntroDuration = 1.5f;
+                const float MinIntroProgressSpeed = 1.0f / MinIntroDuration; // ~0.667 por segundo
+
+                if (compiling)
+                {
+                    // Compilacion en curso: avance lento hasta 90%
+                    float speed = 0.05f + MathF.Min((float)_introTime * 0.01f, 0.15f);
+                    _introProgress = MathF.Min(_introProgress + speed * (float)Time.UnscaledDeltaTime, 0.90f);
+                }
+                else
+                {
+                    // Sin compilacion: avanzar a velocidad minima garantizada hasta 100%
+                    float speed = MathF.Min(2.0f, MinIntroProgressSpeed);
+                    _introProgress = MathF.Min(_introProgress + speed * (float)Time.UnscaledDeltaTime, 1.0f);
+
+                    if (_introProgress >= 1.0f)
+                    {
+                        _finishDelay += (float)Time.UnscaledDeltaTime;
+                        if (_finishDelay >= 0.3f)
+                        {
+                            _introTime = IntroDuration; // dispara el fin de la intro
+                        }
+                    }
+                }
+
+                string status = compiling
+                    ? "Compilando scripts..."
+                    : (_introProgress < 1.0f ? "Preparando editor..." : "Listo");
+                string pctText = (_introProgress * 100f).ToString("F2") + "%";
 
                 // -- CLOSE PHASE (0 -> IntroCloseDuration): Bars slide IN, text fades in --
                 if (time < IntroCloseDuration)
@@ -1132,6 +1169,22 @@ public class EditorApplication : Game
                         byte alpha = (byte)(EaseOutQuart(textFade) * 255);
                         DrawIntroBrand(canvas, cx, cy, alpha, font);
                     }
+                }
+
+                // Barra de progreso y texto de estado
+                float barW = w * 0.6f;
+                float barX = (w - barW) / 2f;
+                float progressBarY = cy + 80f;
+                float barHeight = 6f;
+                canvas.RectFilled(barX, progressBarY, barW, barHeight, new Prowl.Vector.Color32(255, 40, 40, 45));
+                float filledW = barW * _introProgress;
+                canvas.RectFilled(barX, progressBarY, filledW, barHeight, new Prowl.Vector.Color32(255, 200, 200, 210));
+
+                var textColor = Prowl.Vector.Color32.FromArgb(255, 230, 230, 230);
+                if (font != null)
+                {
+                    canvas.DrawText(status, cx, progressBarY + 24f, textColor, 22f, font, 0f, new Float2(0.5f, 0f), quality: Scribe.FontQuality.Ultra);
+                    canvas.DrawText(pctText, cx, progressBarY + 52f, textColor, 18f, font, 0f, new Float2(0.5f, 0f), quality: Scribe.FontQuality.Ultra);
                 }
             }));
     }
