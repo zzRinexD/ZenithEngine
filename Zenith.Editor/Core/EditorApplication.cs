@@ -31,6 +31,8 @@ public class EditorApplication : Game
     /// <summary> Gets the singleton EditorApplication instance. Set during Initialize(). </summary>
     public static EditorApplication? Instance { get; private set; }
 
+    public static bool SkipIntro { get; set; }
+
     /// <summary>The editor's PropertyGrid configuration (drawers, handlers, callbacks).</summary>
     public static OrigamiUI.PropertyGridConfig PropertyGridConfig { get; private set; } = null!;
 
@@ -1050,6 +1052,8 @@ public class EditorApplication : Game
 
     private void DrawIntro(Paper paper)
     {
+        if (SkipIntro) return;
+
         float w = paper.ScreenRect.Size.X;
         float h = paper.ScreenRect.Size.Y;
 

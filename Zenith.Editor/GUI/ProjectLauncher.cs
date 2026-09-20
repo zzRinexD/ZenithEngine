@@ -89,7 +89,8 @@ public static class ProjectLauncher
     {
         _newProjectPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Prowl Projects");
         IsOpen = true;
-        _tab = 0;
+        var recent = RecentProjects.FavoritesFirst();
+        _tab = recent.Count == 0 ? 1 : 0;
         _animTime = 0;
         _tipIndex = Random.Shared.Next(_tipKeys.Length);
         _tipTimer = 0;

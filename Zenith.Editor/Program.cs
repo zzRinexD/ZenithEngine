@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
@@ -97,7 +98,10 @@ public static class Program
 
         RegisterMiniAudioExResolver();
 
-        ReadArguments(args);
+        bool skipIntro = args.Contains("--skip-intro") || args.Contains("-s");
+        string[] filteredArgs = args.Where(a => a != "--skip-intro" && a != "-s").ToArray();
+
+        ReadArguments(filteredArgs);
 
         if (BuildMode)
         {
@@ -122,6 +126,8 @@ public static class Program
             Build.ProjectBuilder.StartBuildAsync(false, BuildOutputPath ?? StartupProjectPath + "/../Builds");
             return;
         }
+
+        EditorApplication.SkipIntro = skipIntro;
 
         var editor = new EditorApplication();
         editor.Run("Zenith Engine", 1920, 1080);
