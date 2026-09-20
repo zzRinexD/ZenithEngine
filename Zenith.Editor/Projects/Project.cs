@@ -6,7 +6,7 @@ namespace Prowl.Editor.Projects;
 
 /// <summary>
 /// Represents a Prowl project on disk.
-/// A project is a folder containing an Assets/ directory and a .prowl marker file.
+/// A project is a folder containing an Assets/ directory and a .zenith marker file.
 /// </summary>
 public class Project
 {
@@ -27,7 +27,7 @@ public class Project
     public string PackagesPath => Path.Combine(RootPath, "Packages");
     public string TempPath => Path.Combine(RootPath, "Temp");
     public string LogsPath => Path.Combine(RootPath, "Logs");
-    public string ProwlFilePath => Path.Combine(RootPath, $"{Name}.prowl");
+    public string ZenithFilePath => Path.Combine(RootPath, $"{Name}.zenith");
     public string MetadataDbPath => Path.Combine(LibraryPath, "metadata.db");
     public string EditorStatePath => Path.Combine(LibraryPath, "EditorState.json");
 
@@ -41,6 +41,45 @@ public class Project
     public string GameCsprojPath => Path.Combine(RootPath, $"{Name}.Game.csproj");
     public string EditorCsprojPath => Path.Combine(RootPath, $"{Name}.Editor.csproj");
     public string ProjectSolutionPath => Path.Combine(RootPath, $"{Name}.slnx");
+
+    private static void MigrateLegacyProjectFile(string rootPath, string projectName)
+    {
+        string legacyPath = Path.Combine(rootPath, projectName + ".prowl");
+        string newPath = Path.Combine(rootPath, projectName + ".zenith");
+
+        if (!File.Exists(legacyPath)) return;
+        if (File.Exists(newPath))
+        {
+            Runtime.Debug.LogWarning(
+                $"Both '{legacyPath}' and '{newPath}' exist. Using '{newPath}'. " +
+                $"The legacy file was not modified.");
+            return;
+        }
+
+        try
+        {
+            File.Move(legacyPath, newPath);
+            Runtime.Debug.Log(
+                $"Migrated project file from '{legacyPath}' to '{newPath}'.");
+        }
+        catch (Exception ex)
+        {
+            Runtime.Debug.LogWarning(
+                $"Failed to rename project file: {ex.Message}. Trying copy+delete.");
+            try
+            {
+                File.Copy(legacyPath, newPath);
+                File.Delete(legacyPath);
+                Runtime.Debug.Log($"Copied project file to '{newPath}'.");
+            }
+            catch (Exception ex2)
+            {
+                Runtime.Debug.LogError(
+                    $"Failed to migrate project file: {ex2.Message}. " +
+                    $"The legacy file remains at '{legacyPath}'.");
+            }
+        }
+    }
 
     private Project(string rootPath, string name)
     {
@@ -78,13 +117,13 @@ public class Project
     }
 
     /// <summary>
-    /// Open an existing project from a root folder or .prowl file path.
+    /// Open an existing project from a root folder or .zenith file path.
     /// </summary>
     public static Project Open(string path)
     {
         string rootPath;
 
-        if (File.Exists(path) && path.EndsWith(".prowl", StringComparison.OrdinalIgnoreCase))
+        if (File.Exists(path) && path.EndsWith(".zenith", StringComparison.OrdinalIgnoreCase))
         {
             rootPath = Path.GetDirectoryName(path)!;
         }
@@ -99,19 +138,22 @@ public class Project
 
         rootPath = Path.GetFullPath(rootPath);
 
+        // Migrate legacy .prowl file if present
+        MigrateLegacyProjectFile(rootPath, Path.GetFileName(rootPath));
+
         // Validate the project has an Assets/ folder
         string assetsDir = Path.Combine(rootPath, "Assets");
         if (!Directory.Exists(assetsDir))
             throw new InvalidOperationException($"Not a valid Prowl project: missing Assets/ folder in '{rootPath}'");
 
-        // Find the project name from .prowl file or folder name
+        // Find the project name from .zenith file or folder name
         string name = Path.GetFileName(rootPath);
-        var prowlFiles = Directory.GetFiles(rootPath, "*.prowl");
-        if (prowlFiles.Length > 0)
+        var zenithFiles = Directory.GetFiles(rootPath, "*.zenith");
+        if (zenithFiles.Length > 0)
         {
             try
             {
-                string json = File.ReadAllText(prowlFiles[0]);
+                string json = File.ReadAllText(zenithFiles[0]);
                 using var doc = JsonDocument.Parse(json);
                 if (doc.RootElement.TryGetProperty("name", out var nameProp))
                     name = nameProp.GetString() ?? name;
@@ -122,8 +164,8 @@ public class Project
         var project = new Project(rootPath, name);
         project.EnsureDirectories();
 
-        // Write .prowl file if missing
-        if (prowlFiles.Length == 0)
+        // Write .zenith file if missing
+        if (zenithFiles.Length == 0)
             project.WriteProwlFile();
 
         return project;
@@ -183,7 +225,7 @@ public class Project
         };
 
         string json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(ProwlFilePath, json);
+        File.WriteAllText(ZenithFilePath, json);
     }
 
     private const string DirectoryBuildPropsTemplate =
