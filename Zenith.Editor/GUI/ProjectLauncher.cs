@@ -87,7 +87,7 @@ public static class ProjectLauncher
     /// <summary> Sets the default new-project path and resets the launcher to its initial state. </summary>
     public static void Initialize()
     {
-        _newProjectPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Prowl Projects");
+        _newProjectPath = Core.EditorPaths.DefaultProjectsFolder;
         IsOpen = true;
         var recent = RecentProjects.FavoritesFirst();
         _tab = recent.Count == 0 ? 1 : 0;

@@ -109,11 +109,42 @@ public static class RecentProjects
             if (File.Exists(_filePath))
             {
                 string json = File.ReadAllText(_filePath);
-                return JsonSerializer.Deserialize<List<RecentProjectEntry>>(json) ?? new();
+                var entries = JsonSerializer.Deserialize<List<RecentProjectEntry>>(json) ?? new();
+                bool needsSave = false;
+                foreach (var entry in entries)
+                {
+                    string updated = TryMigrateLegacyPath(entry.Path);
+                    if (updated != entry.Path)
+                    {
+                        entry.Path = updated;
+                        needsSave = true;
+                    }
+                }
+                if (needsSave)
+                {
+                    _entries = entries;
+                    Save();
+                }
+                return entries;
             }
         }
         catch { }
         return new();
+    }
+
+    /// <summary>
+    /// Si el path apunta a una carpeta legacy que ya no existe, intenta
+    /// sustituir "Prowl Projects" o "ProwlProjects" por "Zenith Projects".
+    /// Solo cambia si el nuevo path existe en disco.
+    /// </summary>
+    private static string TryMigrateLegacyPath(string oldPath)
+    {
+        if (string.IsNullOrEmpty(oldPath)) return oldPath;
+        if (Directory.Exists(oldPath)) return oldPath; // sigue existiendo, no tocar
+        string newPath = oldPath
+            .Replace("Prowl Projects", "Zenith Projects")
+            .Replace("ProwlProjects", "Zenith Projects");
+        return Directory.Exists(newPath) ? newPath : oldPath;
     }
 
     private static void Save()

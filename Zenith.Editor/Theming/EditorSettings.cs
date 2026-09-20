@@ -20,9 +20,8 @@ public class EditorSettings
     private static readonly string _filePath = Core.EditorPaths.EditorSettingsFile;
 
     // Preferences
-    /// <summary> Gets or sets the default directory for new projects. Defaults to Documents/ProwlProjects. </summary>
-    public string DefaultProjectsPath { get; set; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "ProwlProjects");
+    /// <summary> Gets or sets the default directory for new projects. Defaults to Documents/Zenith Projects. </summary>
+    public string DefaultProjectsPath { get; set; } = Core.EditorPaths.DefaultProjectsFolder;
     public string Locale { get; set; } = "en";
     public bool AutoSaveLayout { get; set; } = true;
     public bool ReimportOnFocusOnly { get; set; } = true;
@@ -146,6 +145,14 @@ public class EditorSettings
                 var settings = JsonSerializer.Deserialize<EditorSettings>(json);
                 if (settings != null)
                 {
+                    // Migrar legacy paths guardados en JSON
+                    if (settings.DefaultProjectsPath != null
+                        && (settings.DefaultProjectsPath.Contains("ProwlProjects")
+                            || settings.DefaultProjectsPath.Contains("Prowl Projects")))
+                    {
+                        settings.DefaultProjectsPath = Core.EditorPaths.DefaultProjectsFolder;
+                    }
+
                     settings.Theme.InitRamps();
                     settings.ApplyTheme();
                     return settings;

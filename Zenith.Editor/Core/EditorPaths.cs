@@ -20,6 +20,21 @@ public static class EditorPaths
     /// <summary>Archivo de proyectos recientes.</summary>
     public static readonly string RecentProjectsFile = Path.Combine(EditorDataFolder, "RecentProjects.json");
 
+    /// <summary>Carpeta default donde se crean los proyectos nuevos.</summary>
+    public static readonly string DefaultProjectsFolder = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        "Zenith Projects");
+
+    /// <summary>Carpeta legacy con espacio (Prowl original).</summary>
+    private static readonly string LegacyProjectsFolder = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        "Prowl Projects");
+
+    /// <summary>Carpeta legacy sin espacio (variante en EditorSettings).</summary>
+    private static readonly string LegacyProjectsFolderNoSpace = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        "ProwlProjects");
+
     /// <summary>Carpeta legacy (Prowl). Se migra a EditorDataFolder la primera vez.</summary>
     private static readonly string LegacyEditorDataFolder = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -58,6 +73,15 @@ public static class EditorPaths
         catch (Exception ex)
         {
             Runtime.Debug.LogError($"Failed to migrate editor data: {ex.Message}");
+        }
+
+        // Avisar si hay proyectos en la carpeta legacy. NO mover nada.
+        if (Directory.Exists(LegacyProjectsFolder) && !Directory.Exists(DefaultProjectsFolder))
+        {
+            Runtime.Debug.Log(
+                $"Detected old projects folder at '{LegacyProjectsFolder}'. " +
+                $"New projects will use '{DefaultProjectsFolder}'. " +
+                $"Your old projects remain accessible from '{LegacyProjectsFolder}'.");
         }
     }
 }
