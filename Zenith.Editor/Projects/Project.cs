@@ -96,8 +96,8 @@ public class Project
             throw new InvalidOperationException($"Directory '{rootPath}' already exists and is not empty.");
 
         var project = new Project(rootPath, projectName);
+        EnsureProjectStructure(rootPath, projectName);
         project.EnsureDirectories();
-        project.WriteProwlFile();
 
         // Create a default .gitignore
         string gitignore = Path.Combine(rootPath, ".gitignore");
@@ -144,7 +144,7 @@ public class Project
         // Validate the project has an Assets/ folder
         string assetsDir = Path.Combine(rootPath, "Assets");
         if (!Directory.Exists(assetsDir))
-            throw new InvalidOperationException($"Not a valid Prowl project: missing Assets/ folder in '{rootPath}'");
+            throw new InvalidOperationException($"Not a valid Zenith project: missing Assets/ folder in '{rootPath}'");
 
         // Find the project name from .zenith file or folder name
         string name = Path.GetFileName(rootPath);
@@ -172,6 +172,29 @@ public class Project
     }
 
     /// <summary>
+    /// Inicializa una carpeta existente como proyecto Zenith sin borrar
+    /// ningun archivo. Crea Assets/ y el <Name>.zenith si faltan.
+    /// Lanza InvalidOperationException si folderPath no existe o no es
+    /// un directorio, o si el nombre de carpeta no es valido.
+    /// </summary>
+    public static void InitializeFolder(string folderPath)
+    {
+        if (!Directory.Exists(folderPath))
+            throw new InvalidOperationException(
+                $"Cannot initialize project: directory does not exist: '{folderPath}'.");
+
+        string trimmed = folderPath.TrimEnd(
+            Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        string projectName = Path.GetFileName(trimmed);
+
+        if (string.IsNullOrWhiteSpace(projectName))
+            throw new InvalidOperationException(
+                $"Cannot initialize project: invalid folder name for '{folderPath}'.");
+
+        EnsureProjectStructure(folderPath, projectName);
+    }
+
+    /// <summary>
     /// Set this project as the currently active project.
     /// </summary>
     /// <param name="addToRecent">
@@ -193,12 +216,26 @@ public class Project
     public static void CloseCurrent() => Current = null;
 
     /// <summary>
-    /// Check if a directory looks like a valid Prowl project.
+    /// Check if a directory looks like a valid Zenith project.
     /// </summary>
     public static bool IsValidProject(string path)
     {
         if (!Directory.Exists(path)) return false;
         return Directory.Exists(Path.Combine(path, "Assets"));
+    }
+
+    private static void EnsureProjectStructure(string rootPath, string projectName)
+    {
+        string assetsPath = Path.Combine(rootPath, "Assets");
+        if (!Directory.Exists(assetsPath))
+            Directory.CreateDirectory(assetsPath);
+
+        string zenithPath = Path.Combine(rootPath, projectName + ".zenith");
+        if (!File.Exists(zenithPath))
+        {
+            var tempProject = new Project(rootPath, projectName);
+            tempProject.WriteProwlFile();
+        }
     }
 
     private void EnsureDirectories()

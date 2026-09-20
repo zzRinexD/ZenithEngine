@@ -624,6 +624,33 @@ public static class ProjectLauncher
 
     private static void TryOpenProject(string path)
     {
+        if (!Directory.Exists(path))
+        {
+            Toasts.Warning("Invalid path", "Invalid path.");
+            return;
+        }
+
+        if (!Project.IsValidProject(path))
+        {
+            Origami.Confirm(
+                Loc.Get("launcher.init_title"),
+                Loc.Get("launcher.init_body",
+                         new { name = Path.GetFileName(path) }),
+                () =>
+                {
+                    try
+                    {
+                        Project.InitializeFolder(path);
+                        TryOpenProject(path);
+                    }
+                    catch (Exception ex)
+                    {
+                        Toasts.Warning("Initialize failed", ex.Message);
+                    }
+                });
+            return;
+        }
+
         try
         {
             var project = Project.Open(path);
