@@ -555,7 +555,7 @@ public class TerrainEditor : CustomEditor
     {
         var b = paper.Box(id).Width(20).Height(20).Rounded(5)
             .Margin(0, 0, UnitValue.Stretch(), UnitValue.Stretch())
-            .BackgroundColor(EditorTheme.Glass).BorderColor(EditorTheme.BorderSoft).BorderWidth(1);
+            .BackgroundColor(EditorTheme.Neutral700).BorderColor(EditorTheme.BorderSoft).BorderWidth(1);
         if (enabled)
         {
             b.Hovered.BackgroundColor(danger ? EditorTheme.WithAlpha(EditorTheme.Red400, 41) : EditorTheme.Hover).End();

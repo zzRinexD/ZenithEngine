@@ -85,6 +85,7 @@ public class HierarchyPanel : DockPanel
 
         using (paper.Column("hier_root")
             .Size(width, height)
+            .BackgroundColor(EditorTheme.Neutral400)
             .OnClick(0, (_, _) => Selection.Clear())
             //.OnRightClick(0, (_, _) => Selection.Clear())
             .Enter())
@@ -205,7 +206,7 @@ public class HierarchyPanel : DockPanel
             if (!_sceneExpanded)
                 return;
 
-            using (paper.Box("hier_bg").Enter())
+            using (paper.Box("hier_bg").BackgroundColor(EditorTheme.Neutral400).Enter())
             {
                 // Background right-click create menu only
                 BuildBackgroundContextMenu(paper);
@@ -364,7 +365,7 @@ public class HierarchyPanel : DockPanel
 
                         // Icon (vector, chosen from the GameObject's first component + coloured)
                         var (goIcon, goColor) = GetGoStyle(go);
-                        if (!go.EnabledInHierarchy) goColor = Color.FromArgb(120, goColor);
+                        if (!go.EnabledInHierarchy) goColor = Color.FromArgb(120, EditorTheme.Ink200.R, EditorTheme.Ink200.G, EditorTheme.Ink200.B);
                         paper.Box($"hier_ico_{goId}")
                             .Width(18).Height(EditorTheme.RowHeight).IsNotInteractable()
                             .Icon(paper, goIcon, goColor, size: 14f);

@@ -178,10 +178,10 @@ internal sealed class GradientEditorModal : IModal
             .PositionType(PositionType.SelfDirected)
             .Position(_anchorX, _anchorY)
             .Width(EditorW).Height(UnitValue.Auto)
-            .BackgroundColor(theme.Neutral.C300)
+            .BackgroundColor(theme.Neutral.C500)
             .BorderColor(ink.C200).BorderWidth(1)
             .Rounded(m.ContainerRounding)
-            .DropShadow(0, 4, 24, 0, Color.FromArgb(100, 0, 0, 0))
+            .DropShadow(0, 4, 24, 0, Color.FromArgb(100, EditorTheme.Neutral500))
             .Padding(m.PaddingLarge, m.PaddingLarge, m.PaddingLarge, m.PaddingLarge)
             .Gap(m.SpacingMedium)
             .Layer(layer)
@@ -281,7 +281,7 @@ internal sealed class GradientEditorModal : IModal
                 }
 
                 // Border
-                var borderCol = Color32.FromArgb(255, (byte)ink.C300.R, (byte)ink.C300.G, (byte)ink.C300.B);
+                var borderCol = Color32.FromArgb(255, (byte)theme.Neutral.C500.R, (byte)theme.Neutral.C500.G, (byte)theme.Neutral.C500.B);
                 canvas.SetStrokeColor(borderCol);
                 canvas.SetStrokeWidth(1);
                 canvas.BeginPath();

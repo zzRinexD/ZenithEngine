@@ -9,7 +9,7 @@ using Prowl.OrigamiUI;
 namespace Prowl.Editor.Theming;
 
 /// <summary>Static editor-background style used when the animated background is off.</summary>
-public enum EditorBackgroundStyle { Nebula, Gradient, Color }
+public enum EditorBackgroundStyle { Color }
 
 /// <summary>
 /// A color ramp with a single primary color. Other stops are computed from RGB offsets.
@@ -93,19 +93,19 @@ public class EditorThemeData
 
     // Color ramps (customization overlaid onto Origami's defaults). Primary = the bright ★ C500 stop.
     /// <summary> Neutral color ramp for backgrounds and surfaces. </summary>
-    public ColorRamp Neutral { get; set; } = new() { Primary = "#181830" };
-    /// <summary> Purple accent color ramp. </summary>
-    public ColorRamp Purple { get; set; } = new() { Primary = "#6366F1" };
-    /// <summary> Blue accent color ramp. </summary>
-    public ColorRamp Blue { get; set; } = new() { Primary = "#8B5CF6" };
-    /// <summary> Red accent color ramp. </summary>
+    public ColorRamp Neutral { get; set; } = new() { Primary = "#121212" };
+    /// <summary> Accent color ramp (warm white). </summary>
+    public ColorRamp Purple { get; set; } = new() { Primary = "#EDDEDD" };
+    /// <summary> Info neutral color ramp (grey). </summary>
+    public ColorRamp Blue { get; set; } = new() { Primary = "#8A8A8A" };
+    /// <summary> Danger / error color ramp. </summary>
     public ColorRamp Red { get; set; } = new() { Primary = "#FB7185" };
-    /// <summary> Green accent color ramp. </summary>
+    /// <summary> Success color ramp. </summary>
     public ColorRamp Green { get; set; } = new() { Primary = "#4ADE80" };
-    /// <summary> Amber accent color ramp. </summary>
+    /// <summary> Warning / amber color ramp. </summary>
     public ColorRamp Amber { get; set; } = new() { Primary = "#FBBF24" };
     /// <summary> Ink color ramp for text and high-contrast elements. </summary>
-    public ColorRamp Ink { get; set; } = new() { Primary = "#EAEAF7" };
+    public ColorRamp Ink { get; set; } = new() { Primary = "#EDDEDD" };
 
     // Font
     /// <summary> Name of the default UI font. </summary>
@@ -120,8 +120,6 @@ public class EditorThemeData
     // Sizing
     /// <summary> Height of the menu bar in pixels. </summary>
     public float MenuBarHeight { get; set; } = 40f;
-    /// <summary> Height of the status bar in pixels. </summary>
-    public float StatusBarHeight { get; set; } = 26f;
     /// <summary> Height of a single row in pixels. </summary>
     public float RowHeight { get; set; } = 24f;
     /// <summary> Default font size in points. </summary>
@@ -154,37 +152,21 @@ public class EditorThemeData
     /// <summary> Whether anti-aliasing is enabled. </summary>
     public bool AntiAliasing { get; set; } = true;
 
-    // Background: animated nebula, or a static style (frozen nebula / gradient / solid colour).
-    /// <summary> Whether the animated nebula background is enabled. </summary>
-    public bool AnimatedBackground { get; set; } = true;
-    /// <summary> Speed of the animated background. </summary>
-    public float BackgroundSpeed { get; set; } = 1f;
-    /// <summary> Static background style used when the animated background is off. </summary>
-    public EditorBackgroundStyle BackgroundStyle { get; set; } = EditorBackgroundStyle.Nebula;
-    /// <summary> First background gradient color as hex. </summary>
-    public string BackgroundColorA { get; set; } = "#1B1130";
-    /// <summary> Second background gradient color as hex. </summary>
-    public string BackgroundColorB { get; set; } = "#08060C";
-
-    // Nebula layer toggles + the raw void colour behind everything.
-    /// <summary> Whether nebula gradient layers are shown. </summary>
-    public bool BgShowGradients { get; set; } = true;
-    /// <summary> Whether nebula stars are shown. </summary>
-    public bool BgShowStars { get; set; } = true;
-    /// <summary> Whether nebula comets are shown. </summary>
-    public bool BgShowComets { get; set; } = true;
-    /// <summary> Solid color behind all background layers as hex. </summary>
-    public string BackgroundVoidColor { get; set; } = "#060409";
+    // Background: static style (gradient / solid colour / frozen nebula).
+    /// <summary> Static background style. </summary>
+    public EditorBackgroundStyle BackgroundStyle { get; set; } = EditorBackgroundStyle.Color;
+    /// <summary> Background color as hex. </summary>
+    public string BackgroundColorA { get; set; } = "#121212";
 
     // Default ramp stops (RGB) = Origami's ramps. Customization is applied on top of Origami's
     // live theme, preserving each stop's alpha, so translucent glass surfaces stay glass.
-    private static readonly Color[] DefaultNeutral = [H("#06060E"), H("#96A0FF"), H("#161628"), H("#0E0E1C"), H("#181830"), H("#22223E"), H("#30304E")];
-    private static readonly Color[] DefaultPurple  = [H("#14153A"), H("#1E1F4D"), H("#2E3072"), H("#464B9E"), H("#6366F1"), H("#818CF8"), H("#A5B4FC")];
-    private static readonly Color[] DefaultBlue    = [H("#1A0F33"), H("#241547"), H("#372066"), H("#4E2E8C"), H("#8B5CF6"), H("#A78BFA"), H("#C4B5FD")];
-    private static readonly Color[] DefaultRed     = [H("#1F0E10"), H("#3A181E"), H("#5A242C"), H("#8C3442"), H("#FB7185"), H("#FC8C9C"), H("#FAAFBA")];
-    private static readonly Color[] DefaultGreen   = [H("#0F1F15"), H("#162C20"), H("#1F4530"), H("#2D6446"), H("#4ADE80"), H("#78E6A0"), H("#AAF0C3")];
-    private static readonly Color[] DefaultAmber   = [H("#1F1808"), H("#3A2A10"), H("#5C4017"), H("#825C28"), H("#FBBF24"), H("#FCD060"), H("#FAE0A0")];
-    private static readonly Color[] DefaultInk     = [H("#494960"), H("#6A6A86"), H("#9090AB"), H("#BBBBD4"), H("#EAEAF7"), H("#FFFFFF"), H("#FFFFFF")];
+    private static readonly Color[] DefaultNeutral = [H("#080808"), H("#0A0A0A"), H("#1A1A1A"), H("#121212"), H("#121212"), H("#181818"), H("#242424")];
+    private static readonly Color[] DefaultPurple  = [H("#D5C5C5"), H("#DCCCCC"), H("#E2D0D0"), H("#EBDBDB"), H("#EDDEDD"), H("#F5EDED"), H("#FFFFFF")];
+    private static readonly Color[] DefaultBlue    = [H("#3A3A3A"), H("#4A4A4A"), H("#5A5A5A"), H("#6A6A6A"), H("#8A8A8A"), H("#A0A0A0"), H("#C0C0C0")];
+    private static readonly Color[] DefaultRed     = [H("#2A1818"), H("#3A2222"), H("#5A3030"), H("#7A4040"), H("#FB7185"), H("#FC9999"), H("#FDBDBD")];
+    private static readonly Color[] DefaultGreen   = [H("#0F1A0F"), H("#162C1F"), H("#1F3A28"), H("#2D4A38"), H("#4ADE80"), H("#78E6A0"), H("#AAF0C3")];
+    private static readonly Color[] DefaultAmber   = [H("#1F1808"), H("#2A2210"), H("#3A2E18"), H("#4A3A20"), H("#FBBF24"), H("#FCD060"), H("#FAE0A0")];
+    private static readonly Color[] DefaultInk     = [H("#5A5A5A"), H("#6A6A6A"), H("#8A8A8A"), H("#A0A0A0"), H("#EDDEDD"), H("#FFFFFF"), H("#FFFFFF")];
 
     private static Color H(string hex) => ColorTranslator.FromHtml(hex);
 

@@ -97,7 +97,7 @@ public static class GameObjectInspector
         string? label, string value, string[] options, int current, Action<int> onSelect, bool chevron, UnitValue width)
     {
         using (paper.Row(id).Width(width).Height(26).Rounded(7).Padding(9, 9, 0, 0).Gap(6)
-            .BackgroundColor(EditorTheme.Glass)
+            .BackgroundColor(EditorTheme.Neutral700)
             .BorderColor(EditorTheme.BorderSoft).BorderWidth(1)
             .Hovered.BorderColor(EditorTheme.BorderStrong).End()
             .OnClick(0, (_, _) => Origami.ContextMenu((float)paper.PointerPos.X, (float)paper.PointerPos.Y, b =>

@@ -248,9 +248,9 @@ public static class EditorGUI
         var font = EditorTheme.DefaultFont;
         if (font == null) return width;
 
-        using (paper.Column(id).Width(width).BackgroundColor(Color.FromArgb(36, 0, 0, 0)).Enter())
+        using (paper.Column(id).Width(width).BackgroundColor(EditorTheme.Neutral300).Enter())
         using (paper.Column($"{id}_grp").Height(UnitValue.Auto).Margin(0, 0, UnitValue.StretchOne, UnitValue.StretchOne)
-            .Padding(8, 8, 10, 10).Gap(2).BackgroundColor(Color.FromArgb(36, 0, 0, 0)).Enter())
+            .Padding(8, 8, 10, 10).Gap(2).BackgroundColor(EditorTheme.Neutral300).Enter())
         {
             foreach (var (cid, label, icon) in cats)
             {
@@ -307,7 +307,7 @@ public static class EditorGUI
         using (paper.Column(id).Height(UnitValue.Auto)
             .Margin(m.PaddingLarge, m.PaddingLarge, 0, m.SpacingLarge)
             .Rounded(10).Clip()
-            .BackgroundColor(Color.FromArgb(38, 0, 0, 0)).BorderColor(EditorTheme.BorderSoft).BorderWidth(1).Enter())
+            .BackgroundColor(EditorTheme.Neutral400).BorderColor(EditorTheme.BorderSoft).BorderWidth(1).Enter())
         {
             var font = EditorTheme.FontSemiBold ?? EditorTheme.DefaultFont;
             if (!string.IsNullOrEmpty(title) && font != null)

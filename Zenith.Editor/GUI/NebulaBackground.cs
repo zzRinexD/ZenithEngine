@@ -25,12 +25,6 @@ public sealed class NebulaBackground
     // Per-layer visibility + the raw void colour behind everything (all settable from the theme).
     /// <summary> Whether to draw the coloured nebula gradients. </summary>
     public bool ShowClouds = true;    // the coloured nebula gradients
-    /// <summary> Whether to draw the tileable starfield. </summary>
-    public bool ShowStars = true;
-    /// <summary> Whether to draw the occasional comets. </summary>
-    public bool ShowComets = true;
-    /// <summary> The solid colour drawn behind all other layers. </summary>
-    public System.Drawing.Color VoidColor = System.Drawing.Color.FromArgb(6, 4, 9);
 
     // Theme tint (primary/secondary); the whole nebula is coloured from these.
     private System.Drawing.Color _primary = System.Drawing.Color.FromArgb(168, 85, 247);
@@ -42,13 +36,6 @@ public sealed class NebulaBackground
     // Each cloud glides at constant speed while its heading eases toward a slowly-changing target.
     private struct Cloud { public float cx, cy, ang, targetAng, timer, rf, phase; public Color color; }
     private readonly Cloud[] _clouds = new Cloud[4];
-
-    private const int StarTexSize = 1024;
-    private object? _starTex;
-
-    private struct Comet { public bool active; public float x, y, dx, dy, speed, len, life, dur; }
-    private readonly Comet[] _comets = new Comet[3];
-    private float _cometTimer = 2.5f;
 
     private const float CloudSpeed = 0.045f;
     private const float CloudTurn = 2.5f;
@@ -71,7 +58,6 @@ public sealed class NebulaBackground
     {
         _time += dt;
         UpdateClouds(dt);
-        UpdateComets(dt);
     }
 
     /// <summary>Tint the two dominant nebula clouds with the theme's primary/secondary colours
@@ -90,10 +76,7 @@ public sealed class NebulaBackground
     public void ApplyThemeSettings()
     {
         Retint(EditorTheme.Accent, EditorTheme.Blue400);
-        ShowClouds = EditorTheme.BgShowGradients;
-        ShowStars = EditorTheme.BgShowStars;
-        ShowComets = EditorTheme.BgShowComets;
-        VoidColor = EditorTheme.BackgroundVoidColor;
+        ShowClouds = true;
     }
 
     /// <summary>The single editor-backdrop draw path, shared by the editor shell and the launcher: applies
@@ -102,15 +85,10 @@ public sealed class NebulaBackground
     public static void DrawEditorBackground(Paper paper, NebulaBackground nebula, string id, float w, float h, float dt)
     {
         nebula.ApplyThemeSettings();
-        nebula.Update(EditorTheme.AnimatedBackground ? dt * EditorTheme.BackgroundSpeed : 0f);
+        nebula.Update(0f);
 
         var box = paper.Box(id).PositionType(PositionType.SelfDirected).Position(0, 0).Size(w, h).IsNotInteractable();
-        if (EditorTheme.UsesNebulaBackground)
-            box.OnPostLayout((hnd, rect) => paper.Draw(ref hnd, (canvas, r) => nebula.Draw(canvas, r)));
-        else if (EditorTheme.BackgroundStyle == EditorBackgroundStyle.Gradient)
-            box.BackgroundLinearGradient(0, 0, 0, 1, EditorTheme.BackgroundColorA, EditorTheme.BackgroundColorB);
-        else
-            box.BackgroundColor(EditorTheme.BackgroundColorA);
+        box.BackgroundColor(EditorTheme.BackgroundColorA);
     }
 
     private void UpdateClouds(float dt)
@@ -136,80 +114,13 @@ public sealed class NebulaBackground
         }
     }
 
-    private void UpdateComets(float dt)
-    {
-        dt = Math.Min(dt, 0.1f);
-        if ((_cometTimer -= dt) <= 0f)
-        {
-            for (int i = 0; i < _comets.Length; i++)
-            {
-                if (_comets[i].active) continue;
-                float a = (float)(_rng.NextDouble() * MathF.Tau);
-                float cdx = MathF.Cos(a), cdy = MathF.Sin(a);
-                float cx0 = (float)(0.1 + _rng.NextDouble() * 0.8);
-                float cy0 = (float)(_rng.NextDouble() * 0.6);
-                if ((cx0 < 0.28f && cdx < 0f) || (cx0 > 0.72f && cdx > 0f)) cdx = -cdx;
-                if ((cy0 < 0.28f && cdy < 0f) || (cy0 > 0.72f && cdy > 0f)) cdy = -cdy;
-                _comets[i] = new Comet
-                {
-                    active = true,
-                    x = cx0,
-                    y = cy0,
-                    dx = cdx,
-                    dy = cdy,
-                    speed = (float)(0.09 + _rng.NextDouble() * 0.07),
-                    len = (float)(0.08 + _rng.NextDouble() * 0.06),
-                    dur = (float)(2.8 + _rng.NextDouble() * 1.8)
-                };
-                break;
-            }
-            _cometTimer = (float)(4.0 + _rng.NextDouble() * 6.0);
-        }
-        for (int i = 0; i < _comets.Length; i++)
-        {
-            ref Comet c = ref _comets[i];
-            if (!c.active) continue;
-            c.life += dt / c.dur;
-            if (c.life >= 1f) { c.active = false; continue; }
-            c.x += c.dx * c.speed * dt;
-            c.y += c.dy * c.speed * dt;
-        }
-    }
-
-    private void BuildStarTexture()
-    {
-        const int T = StarTexSize;
-        var data = new byte[T * T * 4];
-        for (int s = 0; s < 170; s++)
-        {
-            float sx = (float)(_rng.NextDouble() * T), sy = (float)(_rng.NextDouble() * T);
-            float bright = (float)(_rng.NextDouble() * 0.55 + 0.30);
-            float rad = (float)(_rng.NextDouble() * 0.6 + 0.35);
-            int rr = (int)MathF.Ceiling(rad * 2f) + 1;
-            for (int oy = -rr; oy <= rr; oy++)
-                for (int ox = -rr; ox <= rr; ox++)
-                {
-                    float a = bright * MathF.Max(0f, 1f - MathF.Sqrt(ox * ox + oy * oy) / (rad * 1.05f));
-                    if (a <= 0f) continue;
-                    int px = (((int)sx + ox) % T + T) % T, py = (((int)sy + oy) % T + T) % T;
-                    int idx = (py * T + px) * 4;
-                    byte va = (byte)(a * 255f);
-                    if (va > data[idx + 3]) { data[idx] = va; data[idx + 1] = va; data[idx + 2] = va; data[idx + 3] = va; }
-                }
-        }
-        _starTex = _paper.Renderer.CreateTexture((uint)T, (uint)T);
-        _paper.Renderer.SetTextureData(_starTex, new IntRect(0, 0, T, T), data);
-    }
-
-    /// <summary> Draws the full nebula background (void fill, clouds, stars and comets) into the specified rectangle. </summary>
+    /// <summary> Draws the full nebula background (void fill, clouds) into the specified rectangle. </summary>
     public void Draw(Canvas vg, Rect rect)
     {
-        if (_starTex == null) BuildStarTexture();
-
         float x = (float)rect.Min.X, y = (float)rect.Min.Y, w = (float)rect.Size.X, h = (float)rect.Size.Y;
         float big = Math.Max(w, h);
 
-        vg.BeginPath(); vg.Rect(x, y, w, h); vg.SetFillColor(ColC(VoidColor, 1f)); vg.Fill();
+        vg.BeginPath(); vg.Rect(x, y, w, h); vg.SetFillColor(ColC(System.Drawing.Color.FromArgb(6, 4, 9), 1f)); vg.Fill();
 
         float t = _time;
 
@@ -229,36 +140,6 @@ public sealed class NebulaBackground
                 y + h * 0.40f + MathF.Sin(t * 0.05f + 2.0f) * 16f,
                 0, w * 0.46f, Lighten(_primary, 0.12f, 0.38f), ColC(_primary, 0f));
         }
-
-        if (ShowStars && _starTex != null)
-            for (float ty = y; ty < y + h; ty += StarTexSize)
-                for (float tx = x; tx < x + w; tx += StarTexSize)
-                    vg.DrawImage(_starTex, tx, ty, StarTexSize, StarTexSize);
-
-        if (ShowComets)
-            foreach (var c in _comets)
-            {
-                if (!c.active) continue;
-                float env = MathF.Sin(c.life * MathF.PI);
-                if (env <= 0.01f) continue;
-                float hx = x + c.x * w, hy = y + c.y * h;
-                float vx = c.dx * w, vy = c.dy * h;
-                float vlen = MathF.Max(1e-4f, MathF.Sqrt(vx * vx + vy * vy));
-                float ux = vx / vlen, uy = vy / vlen;
-                float L = c.len * w;
-                float tlx = hx - ux * L, tly = hy - uy * L;
-                float perpx = -uy, perpy = ux, hw = 1.7f;
-                vg.SaveState();
-                vg.SetLinearBrush(hx, hy, tlx, tly, Lighten(_primary, 0.55f, env * 0.85f), Lighten(_primary, 0.55f, 0f));
-                vg.BeginPath();
-                vg.MoveTo(hx + perpx * hw, hy + perpy * hw);
-                vg.LineTo(hx - perpx * hw, hy - perpy * hw);
-                vg.LineTo(tlx, tly);
-                vg.ClosePath();
-                vg.FillComplexAA();
-                vg.RestoreState();
-                vg.BeginPath(); vg.Circle(hx, hy, 2.2f); vg.SetFillColor(Col(255, 255, 255, env)); vg.Fill();
-            }
 
         RadialFill(vg, x, y, w, h, x + w * 0.5f, y + h * 0.4f, big * 0.55f, big * 0.9f, Col(0, 0, 0, 0f), Col(0, 0, 0, 0.55f));
     }

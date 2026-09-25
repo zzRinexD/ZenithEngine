@@ -62,7 +62,7 @@ public class ProwlActionPropertyEditor : PropertyEditor
             .Rounded(8).BorderColor(EditorTheme.BorderSoft).BorderWidth(1).Clip().Enter())
         {
             using (paper.Row($"{id}_hdr").Height(28).RoundedTop(8).Padding(10, 10, 0, 0)
-                .BackgroundColor(EditorTheme.Glass).Enter())
+                .BackgroundColor(EditorTheme.Neutral700).Enter())
             {
                 paper.Box($"{id}_hl").Height(28).IsNotInteractable()
                     .Text($"{title}   ({calls.Count})", semi).TextColor(EditorTheme.Ink500)
@@ -106,7 +106,7 @@ public class ProwlActionPropertyEditor : PropertyEditor
 
         using (paper.Column(id).Height(UnitValue.Auto)
             .Rounded(6).BorderColor(EditorTheme.BorderSoft).BorderWidth(1)
-            .BackgroundColor(Color.FromArgb(8, 255, 255, 255)).Clip().Enter())
+            .BackgroundColor(EditorTheme.Neutral700).Clip().Enter())
         {
             // Card header: index label + delete button.
             using (paper.Row($"{id}_ch").Height(26).Padding(8, 6, 0, 0).Gap(6).Enter())

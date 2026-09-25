@@ -86,7 +86,6 @@ public class EditorSettings
 
         // Sizing
         EditorTheme.MenuBarHeight = t.MenuBarHeight;
-        EditorTheme.StatusBarHeight = t.StatusBarHeight;
         EditorTheme.RowHeight = t.RowHeight;
         EditorTheme.FontSize = t.FontSize;
         EditorTheme.LabelWidth = t.LabelWidth;
@@ -104,15 +103,8 @@ public class EditorSettings
         EditorTheme.DropShadows = t.DropShadows;
         EditorTheme.AccentGlow = t.AccentGlow;
         EditorTheme.AntiAliasing = t.AntiAliasing;
-        EditorTheme.AnimatedBackground = t.AnimatedBackground;
-        EditorTheme.BackgroundSpeed = t.BackgroundSpeed;
         EditorTheme.BackgroundStyle = t.BackgroundStyle;
         EditorTheme.BackgroundColorA = ColorRamp.ParseHex(t.BackgroundColorA);
-        EditorTheme.BackgroundColorB = ColorRamp.ParseHex(t.BackgroundColorB);
-        EditorTheme.BgShowGradients = t.BgShowGradients;
-        EditorTheme.BgShowStars = t.BgShowStars;
-        EditorTheme.BgShowComets = t.BgShowComets;
-        EditorTheme.BackgroundVoidColor = ColorRamp.ParseHex(t.BackgroundVoidColor);
 
         // Push the freshly-applied editor theme into Origami. Brief lerp so user-visible
         // theme tweaks animate instead of snapping.

@@ -232,7 +232,9 @@ public class InspectorPanel : DockPanel
             _subscribed = true;
         }
 
-        Origami.ScrollView(paper, "insp_scroll", width, height).Padding(0, 0, 0, 0).Body(() =>
+        using (paper.Box("insp_scroll_bg").Size(width, height).BackgroundColor(EditorTheme.Neutral400).Enter())
+        {
+            Origami.ScrollView(paper, "insp_scroll", width, height).Padding(0, 0, 0, 0).Body(() =>
         {
             // Determine what to inspect: current selection, unless it's a folder
             var active = Selection.ActiveObject;
@@ -315,6 +317,7 @@ public class InspectorPanel : DockPanel
 
             paper.Box("insp_bottom_pad").Height(20);
         });
+        }
 
         // Drag a script (.cs) from the Project panel onto the inspector to add it as a component.
         DrawScriptComponentDropZone(paper, font, width, height);

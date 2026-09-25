@@ -266,7 +266,7 @@ public class ConsolePanel : DockPanel
                 return;
             }
 
-            paper.Box("con_content").Width(width - 12).Height(count * rowH).Clip()
+            paper.Box("con_content").Width(width - 12).Height(count * rowH).Clip().BackgroundColor(EditorTheme.Neutral400)
                 .OnClick(0, (_, e) =>
                 {
                     int row = (int)((float)e.RelativePosition.Y / rowH);
@@ -326,7 +326,7 @@ public class ConsolePanel : DockPanel
                 canvas.RectFilled(left, rowY, 2f, rowH, EditorTheme.Accent);
             }
             else if (vi == hoverRow)
-                canvas.RectFilled(left, rowY, w, rowH, Color.FromArgb(13, 168, 85, 247));
+                canvas.RectFilled(left, rowY, w, rowH, Color.FromArgb(13, EditorTheme.Purple400));
 
             float ix = left + padL;
             icon.Draw(canvas, new Rect(ix, line1 - iconSize * 0.5f, ix + iconSize, line1 + iconSize * 0.5f), color, 1.6f);
@@ -370,7 +370,7 @@ public class ConsolePanel : DockPanel
             canvas.SaveState();
             canvas.IntersectScissor(cursorX, rowY, msgLimit - cursorX, rowH);
             msg.MessageLayout ??= Make(msg.Message, mono, EditorTheme.FontSizeSmall);
-            DrawMid(msg.MessageLayout, cursorX, line1, EditorTheme.Ink400);
+            DrawMid(msg.MessageLayout, cursorX, line1, EditorTheme.Ink500);
             if (_multiLine && msg.StackTrace is { StackFrames.Length: > 0 })
             {
                 msg.StackLayout ??= Make(msg.StackTrace.StackFrames[0].ToString(), mono, EditorTheme.FontSizeSmall);

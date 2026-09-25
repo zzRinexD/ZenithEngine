@@ -209,8 +209,6 @@ public static class EditorTheme
     // -- Sizing (mutable so the Preferences panel can tweak) -----------
     /// <summary> Height of the main menu bar. </summary>
     public static float MenuBarHeight = 40f;
-    /// <summary> Height of the status bar. </summary>
-    public static float StatusBarHeight = 26f;
     /// <summary> Standard row height for lists, trees and property grids. </summary>
     public static float RowHeight = 24f;
     // Base spacing/padding the full Origami metric scale (SpacingSmall..PaddingLarge) is derived from
@@ -243,27 +241,10 @@ public static class EditorTheme
     public static bool AccentGlow = true;
     /// <summary> Enables anti-aliasing for UI rendering. </summary>
     public static bool AntiAliasing = true;
-    /// <summary> Enables animated background effects (nebula, comets, stars). </summary>
-    public static bool AnimatedBackground = true;
-    /// <summary> Speed multiplier for background animations. </summary>
-    public static float BackgroundSpeed = 1f;
-    /// <summary> Style of the editor background (Nebula, Gradient, Solid). </summary>
-    public static EditorBackgroundStyle BackgroundStyle = EditorBackgroundStyle.Nebula;
+    /// <summary> Style of the editor background (Gradient, Solid). </summary>
+    public static EditorBackgroundStyle BackgroundStyle = EditorBackgroundStyle.Color;
     /// <summary> First gradient color for the background. </summary>
-    public static Color BackgroundColorA = Color.FromArgb(27, 17, 48);
-    /// <summary> Second gradient color for the background. </summary>
-    public static Color BackgroundColorB = Color.FromArgb(8, 6, 12);
-    /// <summary> Shows gradient layers in the nebula background. </summary>
-    public static bool BgShowGradients = true;
-    /// <summary> Shows star field in the nebula background. </summary>
-    public static bool BgShowStars = true;
-    /// <summary> Shows comet streaks in the nebula background. </summary>
-    public static bool BgShowComets = true;
-    /// <summary> Deepest void color behind all background layers. </summary>
-    public static Color BackgroundVoidColor = Color.FromArgb(6, 4, 9);
-
-    /// <summary>True when the (animated or static) nebula should be drawn rather than a gradient/solid.</summary>
-    public static bool UsesNebulaBackground => AnimatedBackground || BackgroundStyle == EditorBackgroundStyle.Nebula;
+    public static Color BackgroundColorA = Color.FromArgb(18, 18, 18);
 
     /// <summary>The blur radius actually pushed into Origami's metrics (0 when Glass Blur is off).</summary>
     public static float EffectiveBlur => GlassBlur ? BlurAmount : 0f;
@@ -309,11 +290,11 @@ public static class EditorTheme
     private static OrigamiTheme T => OrigamiTheme;
 
     // -- Neutral: editor depth stack. 100/200/500 are editor-specific; 300/400/600/700 map to the ramp. --
-    public static Color Neutral100 => Color.FromArgb(255, 6, 4, 9);        // void deepest base
-    public static Color Neutral200 => Color.FromArgb(240, 12, 10, 20);     // app shell
-    public static Color Neutral300 => T.Neutral.C300;                      // panels / sidebar glass
-    public static Color Neutral400 => T.Neutral.C500;                      // cards / raised surface
-    public static Color Neutral500 => Color.FromArgb(46, 178, 150, 255);   // border / separator
+    public static Color Neutral100 => Color.FromArgb(255, 8, 8, 8);       // deepest dark
+    public static Color Neutral200 => Color.FromArgb(240, 10, 10, 10);     // app shell
+    public static Color Neutral300 => T.Neutral.C300;                      // panels / sidebar glass (#1A1A1A)
+    public static Color Neutral400 => T.Neutral.C500;                      // cards / raised surface (#121212)
+    public static Color Neutral500 => Color.FromArgb(255, 42, 42, 42);     // border / separator (#2A2A2A)
     public static Color Neutral600 => T.Neutral.C600;
     public static Color Neutral700 => T.Neutral.C700;
 
@@ -359,17 +340,17 @@ public static class EditorTheme
     public static Color Amber700 => T.Amber.C700;
 
     // -- Ink: borders (100/200 editor-specific) + text hierarchy (300 hint -> 500 primary). --
-    public static Color Ink100 => Color.FromArgb(40, 178, 150, 255);
-    public static Color Ink200 => Color.FromArgb(72, 190, 150, 255);
-    public static Color Ink300 => T.Ink.C300;
-    public static Color Ink400 => T.Ink.C400;
-    public static Color Ink500 => T.Ink.C500;
+    public static Color Ink100 => Color.FromArgb(255, 90, 90, 90);        // faintest / disabled
+    public static Color Ink200 => Color.FromArgb(255, 138, 138, 138);     // secondary / disabled
+    public static Color Ink300 => T.Ink.C300;                             // hint / secondary text (#8A8A8A)
+    public static Color Ink400 => T.Ink.C400;                             // muted label
+    public static Color Ink500 => T.Ink.C500;                             // primary text (#EDDEDD)
     public static Color Ink600 => T.Ink.C600;
     public static Color Ink700 => T.Ink.C700;
     /// <summary>Dim text tier (below <see cref="Ink300"/>), for de-emphasised metadata.</summary>
-    public static Color InkDim => T.Ink.C200;
+    public static Color InkDim => T.Ink.C200;                              // #8A8A8A
     /// <summary>Faintest text tier, for the most-muted captions / placeholders.</summary>
-    public static Color InkFaint => T.Ink.C100;
+    public static Color InkFaint => T.Ink.C100;                            // #5A5A5A
 
     // -- Semantic surfaces / states. --
     /// <summary>Inset glass fill for toolbars, headers, tag pills and search fields within a panel.</summary>
@@ -389,10 +370,10 @@ public static class EditorTheme
     /// <summary>Light accent for text / small highlights.</summary>
     public static Color AccentText => T.Primary.C700;
 
-    /// <summary> Hover highlight overlay color. </summary>
-    public static Color Hover => WithAlpha(Accent, 31);
-    /// <summary> Selected / active highlight overlay color. </summary>
-    public static Color Selected => WithAlpha(Accent, 41);
+    /// <summary> Hover highlight overlay color (subtle warm white at ~6%). </summary>
+    public static Color Hover => WithAlpha(Accent, 15);
+    /// <summary> Selected / active highlight overlay color (warm white at ~10%). </summary>
+    public static Color Selected => WithAlpha(Accent, 26);
 
     /// <summary> Returns a copy of the color with the specified alpha channel value. </summary>
     public static Color WithAlpha(Color c, int a) => Color.FromArgb(a, c.R, c.G, c.B);

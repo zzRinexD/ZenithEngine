@@ -251,7 +251,7 @@ public class PreferencesPanel : DockPanel
             {
                 using (paper.Row("pref_thr_note").Height(UnitValue.Auto).Margin(0, 0, 10, 0)
                     .Rounded(9).Padding(10, 10, 9, 9)
-                    .BackgroundColor(EditorTheme.Glass).BorderColor(EditorTheme.BorderSoft).BorderWidth(1).IsNotInteractable().Enter())
+                    .BackgroundColor(EditorTheme.Neutral300).BorderColor(EditorTheme.BorderSoft).BorderWidth(1).IsNotInteractable().Enter())
                     paper.Box("pref_thr_note_t").Height(UnitValue.Auto).IsNotInteractable()
                         .Text(Loc.Get("pref.theme_note"), font)
                         .Wrap(Scribe.TextWrapMode.Wrap)
@@ -306,7 +306,6 @@ public class PreferencesPanel : DockPanel
     private static readonly ThemePreset[] _presets =
     {
         new("Indigo",   "#6366F1", "#8B5CF6", "#0C0C1A", "#181830", "#EAEAF7"),
-        new("Nebula",   "#A855F7", "#60A5FA", "#0F0C18", "#262036", "#F0EEF7"),
         new("Ember",    "#F97316", "#38BDF8", "#160F0C", "#2A1E16", "#F7EFE8"),
         new("Verdant",  "#4ADE80", "#22C55E", "#0B1410", "#182A20", "#E8F7EF"),
         new("Abyss",    "#60A5FA", "#06B6D4", "#0A0F1A", "#182233", "#E8F0F7"),
@@ -448,7 +447,6 @@ public class PreferencesPanel : DockPanel
         EditorGUI.SettingsSlider(paper, "pref_sp_padding", Loc.Get("pref.padding"), theme.Padding, 0, 16, v => { theme.Padding = v; s.ApplyTheme(); s.Save(); }, "F2", separator: false, compact: true);
         EditorGUI.SettingsSlider(paper, "pref_sp_row", Loc.Get("pref.row_height"), theme.RowHeight, 16, 40, v => { theme.RowHeight = v; s.ApplyTheme(); s.Save(); }, "F2", separator: false, compact: true);
         EditorGUI.SettingsSlider(paper, "pref_sp_menu", Loc.Get("pref.menu_bar_height"), theme.MenuBarHeight, 18, 48, v => { theme.MenuBarHeight = v; s.ApplyTheme(); s.Save(); }, "F2", separator: false, compact: true);
-        EditorGUI.SettingsSlider(paper, "pref_sp_status", Loc.Get("pref.status_bar_height"), theme.StatusBarHeight, 16, 40, v => { theme.StatusBarHeight = v; s.ApplyTheme(); s.Save(); }, "F2", separator: false, compact: true);
         EditorGUI.SettingsSlider(paper, "pref_sp_label", Loc.Get("pref.label_width"), theme.LabelWidth, 60, 240, v => { theme.LabelWidth = v; s.ApplyTheme(); s.Save(); }, "F2", separator: false, compact: true);
         EditorGUI.SettingsSlider(paper, "pref_sp_dock", Loc.Get("pref.dock_spacing"), theme.DockSpacing, 0, 24, v => { theme.DockSpacing = v; s.ApplyTheme(); s.Save(); }, "F2", separator: false, compact: true);
         EditorGUI.SettingsSlider(paper, "pref_sp_tabh", Loc.Get("pref.tab_bar_height"), theme.TabBarHeight, 18, 40, v => { theme.TabBarHeight = v; s.ApplyTheme(); s.Save(); }, "F2", separator: false, compact: true);
@@ -473,38 +471,8 @@ public class PreferencesPanel : DockPanel
         EditorGUI.SettingsToggle(paper, "pref_fx_shadow", Loc.Get("pref.drop_shadows"), theme.DropShadows, v => { theme.DropShadows = v; s.ApplyTheme(); s.Save(); }, separator: false, compact: true);
         EditorGUI.SettingsToggle(paper, "pref_fx_glow", Loc.Get("pref.accent_glow"), theme.AccentGlow, v => { theme.AccentGlow = v; s.ApplyTheme(); s.Save(); }, separator: false, compact: true);
 
-        // Per-layer nebula controls (apply to the animated nebula and the static-Nebula style).
-        void NebulaLayers()
-        {
-            EditorGUI.SettingsToggle(paper, "pref_fx_grad", Loc.Get("pref.nebula_gradients"), theme.BgShowGradients, v => { theme.BgShowGradients = v; s.ApplyTheme(); s.Save(); }, separator: false, compact: true);
-            EditorGUI.SettingsToggle(paper, "pref_fx_stars", Loc.Get("pref.stars"), theme.BgShowStars, v => { theme.BgShowStars = v; s.ApplyTheme(); s.Save(); }, separator: false, compact: true);
-            EditorGUI.SettingsToggle(paper, "pref_fx_comets", Loc.Get("pref.comets"), theme.BgShowComets, v => { theme.BgShowComets = v; s.ApplyTheme(); s.Save(); }, separator: false, compact: true);
-            EditorGUI.SettingsColorField(paper, "pref_fx_void", Loc.Get("pref.void_color"), () => theme.BackgroundVoidColor, v => { theme.BackgroundVoidColor = v; s.ApplyTheme(); s.Save(); }, separator: false, compact: true);
-        }
-
         EditorGUI.SectionHeader(paper, "pref_fx_bg", Loc.Get("pref.background"), compact: true);
-        EditorGUI.SettingsToggle(paper, "pref_fx_anim", Loc.Get("pref.animated_bg"), theme.AnimatedBackground, v => { theme.AnimatedBackground = v; s.ApplyTheme(); s.Save(); }, separator: false, compact: true);
-        if (theme.AnimatedBackground)
-        {
-            EditorGUI.SettingsSlider(paper, "pref_fx_speed", Loc.Get("pref.speed"), theme.BackgroundSpeed, 0, 3, v => { theme.BackgroundSpeed = v; s.ApplyTheme(); s.Save(); }, "F2", separator: false, compact: true);
-            NebulaLayers();
-        }
-        else
-        {
-            EditorGUI.Row(paper, "pref_fx_style", Loc.Get("pref.style"), () =>
-                Origami.EnumDropdown(paper, "pref_fx_style_v", theme.BackgroundStyle,
-                    v => { theme.BackgroundStyle = v; s.ApplyTheme(); s.Save(); }).Show(), compact: true);
-
-            if (theme.BackgroundStyle == EditorBackgroundStyle.Gradient)
-            {
-                EditorGUI.SettingsColorField(paper, "pref_fx_ca", Loc.Get("env.top_color"), () => theme.BackgroundColorA, v => { theme.BackgroundColorA = v; s.ApplyTheme(); s.Save(); }, separator: false, compact: true);
-                EditorGUI.SettingsColorField(paper, "pref_fx_cb", Loc.Get("env.bottom_color"), () => theme.BackgroundColorB, v => { theme.BackgroundColorB = v; s.ApplyTheme(); s.Save(); }, separator: false, compact: true);
-            }
-            else if (theme.BackgroundStyle == EditorBackgroundStyle.Color)
-            {
-                EditorGUI.SettingsColorField(paper, "pref_fx_ca", Loc.Get("env.color"), () => theme.BackgroundColorA, v => { theme.BackgroundColorA = v; s.ApplyTheme(); s.Save(); }, separator: false, compact: true);
-            }
-        }
+        EditorGUI.SettingsColorField(paper, "pref_fx_ca", Loc.Get("env.color"), () => theme.BackgroundColorA, v => { theme.BackgroundColorA = v; s.ApplyTheme(); s.Save(); }, separator: false, compact: true);
 
         EditorGUI.SectionHeader(paper, "pref_fx_render", Loc.Get("pref.rendering"), compact: true);
         EditorGUI.SettingsToggle(paper, "pref_fx_aa", Loc.Get("pref.anti_aliasing"), theme.AntiAliasing, v => { theme.AntiAliasing = v; s.ApplyTheme(); s.Save(); }, separator: false, compact: true);
@@ -518,11 +486,11 @@ public class PreferencesPanel : DockPanel
         const float cardH = 208f;
 
         using (paper.Column("pref_pv").Width(w).Padding(PAD * 2, PAD * 2, PAD * 2, PAD * 2)
-            .BackgroundColor(Color.FromArgb(36, 0, 0, 0)).Enter())
+            .BackgroundColor(EditorTheme.Neutral300).Enter())
         using (paper.Column("pref_pv_center").Height(UnitValue.Auto).Margin(0, 0, UnitValue.StretchOne, UnitValue.StretchOne).Gap(SP * 2).Enter())
         {
             using (paper.Column("pref_pv_card").Height(cardH).Rounded(radius + 2).Clip()
-                .DropShadow(0, 10, 26, -6, Color.FromArgb(150, 0, 0, 0))
+                .DropShadow(0, 10, 26, -6, Color.FromArgb(150, EditorTheme.Neutral500))
                 .BackgroundColor(EditorTheme.Neutral200).BorderColor(EditorTheme.BorderSoft).BorderWidth(1).Enter())
             {
                 // Titlebar

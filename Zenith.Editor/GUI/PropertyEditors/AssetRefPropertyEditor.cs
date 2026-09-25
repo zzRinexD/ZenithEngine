@@ -55,7 +55,7 @@ public class AssetRefPropertyEditor : PropertyEditor
 
             var fieldEl = paper.Row($"{id}_field")
                 .Height(rh)
-                .BackgroundColor(isDragTarget ? Color.FromArgb(60, EditorTheme.Purple400) : EditorTheme.Glass)
+                .BackgroundColor(isDragTarget ? Color.FromArgb(60, EditorTheme.Purple400) : EditorTheme.Neutral700)
                 .Hovered.BorderColor(EditorTheme.BorderStrong).End()
                 .Rounded(6).Padding(m.SpacingLarge, m.PaddingSmall, 0, 0).Gap(m.SpacingLarge)
                 .BorderColor(isDragTarget ? EditorTheme.Purple400 : EditorTheme.BorderSoft).BorderWidth(1)

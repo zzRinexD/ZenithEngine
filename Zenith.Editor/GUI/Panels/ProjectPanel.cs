@@ -356,7 +356,7 @@ public class ProjectPanel : DockPanel
 
         using (paper.Row("proj_footer").Height(FooterHeight)
             .Padding(11, 11, 0, 0)
-            .BackgroundColor(Color.FromArgb(36, 0, 0, 0))
+            .BackgroundColor(EditorTheme.Neutral300)
             .Enter())
         {
             paper.Box("proj_foot_div").PositionType(PositionType.SelfDirected).Position(0, 0).Size(width, 1)
@@ -534,7 +534,7 @@ public class ProjectPanel : DockPanel
     {
         using (paper.Box("proj_tree_bg")
             .Size(FolderTreeWidth, height)
-            .BackgroundColor(Color.FromArgb(26, 0, 0, 0))
+            .BackgroundColor(EditorTheme.Neutral300)
             .OnClick(0, (_, _) => Selection.Clear())
             .Enter())
         {

@@ -169,9 +169,6 @@ public class EditorApplication : Game
             ProjectLauncher.Initialize();
         }
 
-        // Initialize status bar log tracking
-        InitializeStatusBar();
-
         // Build the editor's PropertyGrid config
         PropertyGridConfig = new OrigamiUI.PropertyGridConfig();
         OrigamiUI.BuiltInFieldDrawers.Register(PropertyGridConfig.Drawers);
@@ -533,10 +530,8 @@ public class EditorApplication : Game
 
         float pad = EditorTheme.DockPadding;
         float dockY = EditorTheme.MenuBarHeight + pad;
-        float dockH = h - dockY - pad - EditorTheme.StatusBarHeight;
+        float dockH = h - dockY - pad;
         _dockSpace.Draw(paper, pad, dockY, w - pad * 2, dockH);
-
-        DrawStatusBar(paper, w, h);
 
         // First-run UI tour (once per user; reset from Preferences > General).
         GUI.EditorGuide.SetDockSpace(_dockSpace);
@@ -822,160 +817,7 @@ public class EditorApplication : Game
     }
 
     // ================================================================
-    //  Status Bar (Origami AppBar at bottom)
-    // ================================================================
-
-    // The status bar sources its log data from the shared ConsolePanel store; this just ensures
-    // that store is subscribed to Debug.OnLog even before the Console panel is opened.
-    private static void InitializeStatusBar() => ConsolePanel.EnsureSubscribed();
-
-    // Backend name shown in the footer. Only OpenGL exists today; when more backends land this
-    // should come from the graphics device.
-    private const string GraphicsBackend = "OpenGL 4.1";
-
-    private void DrawStatusBar(Paper paper, float w, float h)
-    {
-        var font = EditorTheme.DefaultFont;
-        if (font == null) return;
-
-        float sh = EditorTheme.StatusBarHeight;
-        float fs = EditorTheme.FontSizeSmall;
-        var dim = EditorTheme.Ink300;
-        var mono = EditorTheme.FontMono ?? font;
-
-        // Glyph-icon (EditorIcons/FontAwesome) + text cell.
-        void GlyphCell(string id, string glyph, System.Drawing.Color glyphColor, string text,
-            System.Drawing.Color textColor, string? tooltip = null)
-        {
-            var row = paper.Row(id).Width(UnitValue.Auto).Height(sh).Margin(0, 8, UnitValue.StretchOne, UnitValue.StretchOne);
-            if (tooltip != null) row.Tooltip(tooltip);
-            using (row.Enter())
-            {
-                paper.Box(id + "_i").Width(14).Height(sh).Margin(0, 4, UnitValue.StretchOne, UnitValue.StretchOne).IsNotInteractable()
-                    .Text(glyph, font).TextColor(glyphColor).FontSize(fs).Alignment(PaperUI.TextAlignment.MiddleCenter);
-                paper.Box(id + "_t").Width(UnitValue.Auto).Height(sh).IsNotInteractable()
-                    .Text(text, font).TextColor(textColor).FontSize(fs).Alignment(PaperUI.TextAlignment.MiddleLeft);
-            }
-        }
-
-        // Console severity icon (Origami icon) + number, for the log counters.
-        void CounterCell(string id, LogSeverity sev, int n)
-        {
-            var (icon, color) = ConsolePanel.SeverityStyle(sev);
-            using (paper.Row(id).Width(UnitValue.Auto).Height(sh).Margin(0, 8, UnitValue.StretchOne, UnitValue.StretchOne).Enter())
-            {
-                paper.Box(id + "_i").Width(14).Height(sh).Margin(0, 3, UnitValue.StretchOne, UnitValue.StretchOne).IsNotInteractable()
-                    .Icon(paper, icon, color, size: 12f);
-                paper.Box(id + "_t").Width(UnitValue.Auto).Height(sh).IsNotInteractable()
-                    .Text(n.ToString(), font).TextColor(dim).FontSize(fs).Alignment(PaperUI.TextAlignment.MiddleLeft);
-            }
-        }
-
-        void Divider(string id) => paper.Box(id).Width(1).Height(sh).Margin(0, 0, 5, 5)
-            .BackgroundColor(EditorTheme.BorderSoft).IsNotInteractable();
-
-        // Uniform edge padding: the footer's left/right edges and both sides of every divider
-        // all use this, so the columns are evenly spaced and the dividers sit centered in the gap.
-        float pad = 10f;
-
-        using (paper.Row("statusbar").PositionType(PositionType.SelfDirected)
-            .Position(0, h - sh).Size(w, sh)
-            .BackgroundColor(EditorTheme.Neutral200).Enter())
-        {
-            // ---------- Column 1: console (last log on the left, counters on the right) ----------
-            using (paper.Row("sb_console").Width(UnitValue.StretchOne).Height(sh).Padding(pad, pad, 0, 0).Enter())
-            {
-                var last = ConsolePanel.LastLog();
-                if (last.HasValue)
-                {
-                    var (sev, msg, src, cnt) = last.Value;
-                    var (icon, color) = ConsolePanel.SeverityStyle(sev);
-                    paper.Box("sb_log_i").Width(16).Height(sh).Margin(0, 5, UnitValue.StretchOne, UnitValue.StretchOne).IsNotInteractable()
-                        .Icon(paper, icon, color, size: 13f);
-                    paper.Box("sb_log_m").Width(UnitValue.StretchOne).Height(sh).Margin(0, 6, UnitValue.StretchOne, UnitValue.StretchOne).IsNotInteractable()
-                        .Text(msg, font).TextTruncate().TextColor(EditorTheme.Ink400).FontSize(fs)
-                        .Alignment(PaperUI.TextAlignment.MiddleLeft).TextTruncate();
-                    if (!string.IsNullOrEmpty(src))
-                        paper.Box("sb_log_s").Width(UnitValue.Auto).Height(sh).Margin(0, 6, UnitValue.StretchOne, UnitValue.StretchOne).IsNotInteractable()
-                            .Text($"[{src}]", mono).TextColor(EditorTheme.InkDim).FontSize(fs - 1)
-                            .Alignment(PaperUI.TextAlignment.MiddleLeft);
-                    if (cnt > 1)
-                        paper.Box("sb_log_c").Width(UnitValue.Auto).Height(sh).IsNotInteractable()
-                            .Text($"x{cnt}", font).TextColor(EditorTheme.InkDim).FontSize(fs - 1)
-                            .Alignment(PaperUI.TextAlignment.MiddleLeft);
-                }
-
-                //paper.Box("sb_console_spacer");
-
-                var (info, warn, err) = ConsolePanel.LogCounts();
-                CounterCell("sb_cnt_info", LogSeverity.Normal, info);
-                CounterCell("sb_cnt_warn", LogSeverity.Warning, warn);
-                CounterCell("sb_cnt_err", LogSeverity.Error, err);
-            }
-
-            Divider("sb_div1");
-
-            // ---------- Column 2: current scene ----------
-            string? scenePath = EditorSceneManager.CurrentScenePath;
-            string sceneName = !string.IsNullOrEmpty(scenePath)
-                ? System.IO.Path.GetFileNameWithoutExtension(scenePath)
-                : (Runtime.Resources.Scene.Current != null ? Loc.Get("editor.untitled_scene") : Loc.Get("hierarchy.no_scene_loaded"));
-            using (paper.Row("sb_scene").Width(UnitValue.Auto).Height(sh).Padding(pad, pad, 0, 0).Enter())
-                GlyphCell("sb_scene_cell", EditorIcons.Shapes, EditorTheme.Ink300, sceneName, EditorTheme.Ink400);
-
-            Divider("sb_div2");
-
-            // ---------- Column 3: editor stats on the left, graphics backend + Git on the right ----------
-            using (paper.Row("sb_stats").Height(sh).Padding(pad, pad, 0, 0).Enter())
-            {
-                long memMb = _dispMemMb;
-                GlyphCell("sb_sel", EditorIcons.ArrowPointer, EditorTheme.Ink300, Selection.Count.ToString(), dim, Loc.Get("editor.stat_selected"));
-                GlyphCell("sb_mem", EditorIcons.Microchip, EditorTheme.Ink300, $"{memMb} MB", dim, Loc.Get("editor.stat_memory"));
-
-                paper.Box("sb_stats_spacer");
-
-                GlyphCell("sb_gfx", EditorIcons.Display, EditorTheme.Ink300, GraphicsBackend, EditorTheme.Ink400);
-
-                Divider("sb_div3");
-                DrawGitCell();
-            }
-        }
-
-        // Git status for the open project (branch + dirty/clean colour), far right of the footer.
-        void DrawGitCell()
-        {
-            GitInfo.Poll();
-
-            var iconColor = EditorTheme.InkDim;
-            var textColor = EditorTheme.InkDim;
-            string text, tip;
-            if (!GitInfo.GitInstalled)
-            {
-                text = Loc.Get("editor.git_not_installed");
-                tip = Loc.Get("editor.git_not_installed_tip");
-            }
-            else if (!GitInfo.IsRepository)
-            {
-                text = Loc.Get("editor.git_no_repo");
-                tip = Loc.Get("editor.git_no_repo_tip");
-            }
-            else
-            {
-                text = GitInfo.Branch;
-                iconColor = GitInfo.HasChanges ? EditorTheme.Amber400 : EditorTheme.Green400;
-                textColor = EditorTheme.Ink400;
-                tip = GitInfo.HasChanges
-                    ? Loc.Get("editor.git_dirty", new { branch = GitInfo.Branch })
-                    : Loc.Get("editor.git_clean", new { branch = GitInfo.Branch });
-            }
-
-            GlyphCell("sb_git", EditorIcons.CodeBranch, iconColor, text, textColor, tip);
-        }
-    }
-
-    // ================================================================
     //  Editor File Dialog Helper
-    // ================================================================
 
     private static OrigamiUI.FileDialogConfig? s_fileDialogConfig;
 
