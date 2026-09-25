@@ -816,8 +816,10 @@ public class EditorApplication : Game
         }
     }
 
+
     // ================================================================
     //  Editor File Dialog Helper
+    // ================================================================
 
     private static OrigamiUI.FileDialogConfig? s_fileDialogConfig;
 
@@ -1811,22 +1813,29 @@ public class EditorApplication : Game
 
     private static DockNode CreateDefaultLayout()
     {
-        // Blender/Unreal-style: a big viewport column on the left, a thin outliner/properties column
-        // on the right.
-        return DockNode.Split(SplitDirection.Horizontal, 0.8f,
-            // Left column: Scene view on top, a Project | Console strip along the bottom.
-            DockNode.Split(SplitDirection.Vertical, 0.7f,
-                DockNode.Leaf(new SceneViewPanel(), new GameViewPanel()),
-                // Bottom strip: Project (65%) | Console (35%, smaller).
-                DockNode.Split(SplitDirection.Horizontal, 0.65f,
-                    DockNode.Leaf(new ProjectPanel()),
-                    DockNode.Leaf(new ConsolePanel())
-                )
-            ),
-            // Right column: Hierarchy (top 30%) | Inspector (bottom 70%).
-            DockNode.Split(SplitDirection.Vertical, 0.3f,
-                DockNode.Leaf(new HierarchyPanel()),
-                DockNode.Leaf(new InspectorPanel())
+        // Layout clásico de 3 columnas:
+        // - Izquierda (~20%): Jerarquía (Hierarchy) 100% altura
+        // - Centro (~60%): Split Vertical: Escena/Juego arriba (~75%), Proyectos abajo (~25%)
+        // - Derecha (~20%): Inspector (100% altura)
+        // La Consola inicia oculta por defecto.
+        var left = DockNode.Leaf(new HierarchyPanel());
+
+        var centerTop = DockNode.Leaf(new SceneViewPanel(), new GameViewPanel());
+        var centerBottom = DockNode.Leaf(new ProjectPanel());
+        var center = DockNode.Split(SplitDirection.Vertical, EditorSettings.Instance.CenterTopRatio,
+            centerTop,
+            centerBottom
+        );
+
+        var right = DockNode.Leaf(new InspectorPanel());
+
+        // Split horizontal principal: proporción de columna izquierda desde EditorSettings | resto (80%)
+        // Dentro del resto: centro según CenterTopRatio | derecha el resto
+        return DockNode.Split(SplitDirection.Horizontal, EditorSettings.Instance.LeftColumnRatio,
+            left,
+            DockNode.Split(SplitDirection.Horizontal, 0.75f,
+                center,
+                right
             )
         );
     }

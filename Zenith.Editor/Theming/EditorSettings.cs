@@ -42,6 +42,13 @@ public class EditorSettings
 
     public bool WindowMaximized { get; set; } = false;
 
+    // Layout proportions (persisted in EditorSettings)
+    /// <summary> Gets or sets the proportion of the left column width. Defaults to 0.18 (18%). </summary>
+    public float LeftColumnRatio { get; set; } = 0.18f;
+
+    /// <summary> Gets or sets the proportion of the center-top height within the center column. Defaults to 0.70 (70%), leaving 30% for the bottom panel. </summary>
+    public float CenterTopRatio { get; set; } = 0.70f;
+
     /// <summary> Gets or sets whether the editor waits for the display before presenting a frame. Play mode ignores this and lets the game decide. </summary>
     public bool VSync { get; set; } = true;
 
