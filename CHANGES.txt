@@ -1,4 +1,0 @@
-Changes in Button.cs:  
-1. Default tab index changed from 0 to null  
-2. Mouse click clears focus via _paper.ClearFocus()  
-3. Keyboard activation (Space/Enter) clears focus via _paper.ClearFocus() 
