@@ -377,7 +377,7 @@ public static class EditorGUI
             .BackgroundColor(active ? EditorTheme.Selected : Color.Transparent)
             .Transition(GuiProp.BackgroundColor, 0.15f)
             .Hovered.BackgroundColor(active ? EditorTheme.Selected : EditorTheme.Hover).End()
-            .Text(glyph, font).TextColor(active ? EditorTheme.Accent : EditorTheme.Ink300).FontSize(14f).Alignment(TextAlignment.MiddleCenter)
+            .Text(glyph, font).TextColor(active ? EditorTheme.OnAccent : EditorTheme.Ink300).FontSize(14f).Alignment(TextAlignment.MiddleCenter)
             .OnClick(_ => onClick());
     }
 

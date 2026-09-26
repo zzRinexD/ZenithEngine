@@ -75,7 +75,7 @@ public class TerrainSceneEditor : SceneTool
             .Width(24).Height(24).Rounded(4)
             .BackgroundColor(isTransform ? EditorTheme.Purple400 : Color.Transparent)
             .Hovered.BackgroundColor(EditorTheme.Ink200).End()
-            .Text(EditorIcons.ArrowsUpDownLeftRight, font).TextColor(EditorTheme.Ink500)
+            .Text(EditorIcons.ArrowsUpDownLeftRight, font).TextColor(isTransform ? EditorTheme.OnAccent : EditorTheme.Ink500)
             .FontSize(11f).Alignment(TextAlignment.MiddleCenter)
             .OnClick(0, (_, _) => _useTransformTool = true);
 
@@ -112,7 +112,7 @@ public class TerrainSceneEditor : SceneTool
             .Width(24).Height(24).Rounded(4)
             .BackgroundColor(active ? EditorTheme.Purple400 : Color.Transparent)
             .Hovered.BackgroundColor(EditorTheme.Ink200).End()
-            .Text(icon, font).TextColor(EditorTheme.Ink500)
+            .Text(icon, font).TextColor(active ? EditorTheme.OnAccent : EditorTheme.Ink500)
             .FontSize(11f).Alignment(TextAlignment.MiddleCenter)
             .OnClick(0, (_, _) => _useTransformTool = false);
     }
@@ -132,7 +132,7 @@ public class TerrainSceneEditor : SceneTool
             .Width(24).Height(24).Rounded(4)
             .BackgroundColor(active ? EditorTheme.Purple400 : Color.Transparent)
             .Hovered.BackgroundColor(EditorTheme.Ink200).End()
-            .Text(icon, font).TextColor(EditorTheme.Ink500)
+            .Text(icon, font).TextColor(active ? EditorTheme.OnAccent : EditorTheme.Ink500)
             .FontSize(11f).Alignment(TextAlignment.MiddleCenter)
             .OnClick(0, (_, _) =>
             {

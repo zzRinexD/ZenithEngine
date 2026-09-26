@@ -606,14 +606,32 @@ public class ProjectPanel : DockPanel
                 })
                 .CustomRowContent((p, node, isSel, isExp) =>
                 {
+                    bool isSelected = isSel;
+                    var bgColor = isSelected ? EditorTheme.Accent : Color.Transparent;
+                    var textColor = isSelected ? EditorTheme.OnAccent : EditorTheme.Ink500;
+                    var iconColor = isSelected ? EditorTheme.OnAccent : EditorTheme.Amber400; // siempre folder
+
                     string relativePath = (string)node.UserData!;
+
+                    // Background for the selected row (clear cream vs transparent)
+                    p.Box($"proj_row_bg_{node.Id.GetHashCode()}")
+                        .PositionType(PositionType.SelfDirected)
+                        .Position(0, 0)
+                        .Size(UnitValue.Stretch(), 22)
+                        .Rounded(3)
+                        .BackgroundColor(bgColor)
+                        .Hovered
+                            .BackgroundColor(isSelected ? EditorTheme.Selected : EditorTheme.Hover)
+                            .End()
+                        .IsNotInteractable();
 
                     // Folder icon
                     p.Box($"proj_fi_{node.Id.GetHashCode()}")
                         .Width(18).Height(22)
                         .Text(EditorIcons.Folder, font)
-                        .TextColor(EditorTheme.Amber400)
-                        .FontSize(12f).Alignment(TextAlignment.MiddleCenter);
+                        .TextColor(iconColor)
+                        .FontSize(12f).Alignment(TextAlignment.MiddleCenter)
+                        .Hovered.TextColor(isSelected ? EditorTheme.OnAccent : EditorTheme.Amber400).End();
 
                     // Name (inline rename or label)
                     if (RenameOverlay.IsRenaming($"proj_folder_{relativePath}"))
@@ -626,9 +644,10 @@ public class ProjectPanel : DockPanel
                             .Height(22)
                             .Margin(4, 0, 0, 0)
                             .Text(node.Label, font)
-                            .TextColor(EditorTheme.Ink500)
+                            .TextColor(textColor)
                             .FontSize(EditorTheme.FontSize)
-                            .Alignment(TextAlignment.MiddleLeft);
+                            .Alignment(TextAlignment.MiddleLeft)
+                            .Hovered.TextColor(isSelected ? EditorTheme.OnAccent : EditorTheme.Ink500).End();
                     }
 
                     // Right-click context menu on folder tree
@@ -890,10 +909,11 @@ public class ProjectPanel : DockPanel
                 paper.Box($"proj_tcsp_{id}").Width(15).Height(TableRowH).IsNotInteractable();
 
             var ic = paper.Box($"proj_tcico_{id}").Width(18).Height(TableRowH).Margin(2, 0, 0, 0);
+            var icColor = isSelected ? EditorTheme.OnAccent : style.Color;
             if (style.Badge != null)
-                ic.Text(style.Badge, mono).TextColor(style.Color).FontSize(10f).Alignment(TextAlignment.MiddleCenter);
+                ic.Text(style.Badge, mono).TextColor(icColor).FontSize(10f).Alignment(TextAlignment.MiddleCenter);
             else
-                ic.Icon(paper, style.Icon, style.Color, size: 15f);
+                ic.Icon(paper, style.Icon, icColor, size: 15f);
 
             if (RenameOverlay.IsRenaming($"proj_asset_{item.RelativePath}"))
             {
@@ -904,18 +924,18 @@ public class ProjectPanel : DockPanel
                 // Name hugs its text so the sub-count tag sits right beside it; a trailing spacer fills the rest.
                 paper.Box($"proj_tclbl_{id}").Width(UnitValue.Auto).Height(TableRowH).Margin(6, 0, 0, 0).Clip()
                     .Text(DisplayName(item), font)
-                    .TextColor(isSub ? EditorTheme.Ink400 : EditorTheme.Ink500)
+                    .TextColor(isSelected ? EditorTheme.OnAccent : (isSub ? EditorTheme.Ink400 : EditorTheme.Ink500))
                     .FontSize(EditorTheme.FontSizeSmall).Alignment(TextAlignment.MiddleLeft);
 
                 if (hasSubs)
                     paper.Box($"proj_tctag_{id}").Width(UnitValue.Auto).Height(17).Rounded(5).Padding(6, 6, 0, 0).Margin(7, 0, UnitValue.StretchOne, UnitValue.StretchOne)
                         .BackgroundColor(EditorTheme.Selected).BorderColor(Color.FromArgb(77, EditorTheme.Purple400)).BorderWidth(1)
-                        .Text(item.Subs.Count.ToString(), semi).TextColor(EditorTheme.AccentText)
+                        .Text(item.Subs.Count.ToString(), semi).TextColor(EditorTheme.OnAccent)
                         .FontSize(11f).Alignment(TextAlignment.MiddleCenter);
                 else if (isSub)
                     paper.Box($"proj_tctag_{id}").Width(UnitValue.Auto).Height(17).Rounded(5).Padding(6, 6, 0, 0).Margin(7, 0, UnitValue.StretchOne, UnitValue.StretchOne)
                         .BackgroundColor(EditorTheme.Selected).BorderColor(Color.FromArgb(77, EditorTheme.Purple400)).BorderWidth(1)
-                        .Text("sub", semi).TextColor(EditorTheme.AccentText)
+                        .Text("sub", semi).TextColor(EditorTheme.OnAccent)
                         .FontSize(10f).Alignment(TextAlignment.MiddleCenter);
 
                 paper.Box($"proj_tcnsp_{id}").Height(TableRowH).IsNotInteractable();
@@ -1292,14 +1312,15 @@ public class ProjectPanel : DockPanel
             }
             else
             {
+                var subColor = isSelected ? EditorTheme.OnAccent : style.Color;
                 paper.Box($"proj_subth_{sub.Guid}").Width(42).Height(42).Margin(UnitValue.StretchOne, UnitValue.StretchOne, 0, 0).Rounded(8)
                     .BackgroundLinearGradient(0, 0, 1, 1, Color.FromArgb(58, style.Color), Color.FromArgb(16, style.Color))
                     .BorderColor(Color.FromArgb(68, style.Color)).BorderWidth(1)
-                    .Icon(paper, style.Icon, style.Color, size: 20f);
+                    .Icon(paper, style.Icon, subColor, size: 20f);
             }
 
             paper.Box($"proj_subnm_{sub.Guid}").Width(UnitValue.Stretch()).Height(14).Clip()
-                .Text(sub.Name, font).TextColor(EditorTheme.Ink300).FontSize(EditorTheme.FontSizeSmall).Alignment(TextAlignment.MiddleCenter);
+                .Text(sub.Name, font).TextColor(isSelected ? EditorTheme.OnAccent : EditorTheme.Ink300).FontSize(EditorTheme.FontSizeSmall).Alignment(TextAlignment.MiddleCenter);
 
             BuildItemContextMenu(paper, $"proj_sub_ctx_{sub.Guid}", sub);
         }
@@ -1420,10 +1441,11 @@ public class ProjectPanel : DockPanel
                 float tileSz = cellSize - 8;
                 var tile = paper.Box($"{id}_t").Width(tileSz).Height(tileSz).Margin(4, 4, 4, 0).Rounded(10);
 
+                var tileColor = isSelected ? EditorTheme.OnAccent : style.Color;
                 if (style.Bare)
                 {
                     // Folder: a bare icon, no tile.
-                    tile.Icon(paper, style.Icon, style.Color, size: tileSz * 0.62f);
+                    tile.Icon(paper, style.Icon, tileColor, size: tileSz * 0.62f);
                 }
                 else
                 {
@@ -1431,10 +1453,10 @@ public class ProjectPanel : DockPanel
                     tile.BackgroundLinearGradient(0, 0, 1, 1, Color.FromArgb(58, style.Color), Color.FromArgb(16, style.Color))
                         .BorderColor(Color.FromArgb(80, style.Color)).BorderWidth(1);
                     if (style.Badge != null)
-                        tile.Text(style.Badge, EditorTheme.FontMono ?? font).TextColor(style.Color)
+                        tile.Text(style.Badge, EditorTheme.FontMono ?? font).TextColor(tileColor)
                             .FontSize(tileSz * 0.4f).Alignment(TextAlignment.MiddleCenter);
                     else
-                        tile.Icon(paper, style.Icon, style.Color, size: tileSz * 0.5f);
+                        tile.Icon(paper, style.Icon, tileColor, size: tileSz * 0.5f);
                 }
             }
 
@@ -1474,7 +1496,7 @@ public class ProjectPanel : DockPanel
                     .Margin(3, 3, 4, 6)
                     .Wrap(Prowl.Scribe.TextWrapMode.Wrap)
                     .Text(DisplayName(item), EditorTheme.FontMedium ?? font)
-                    .TextColor(isSubAsset ? EditorTheme.AccentText : (isSelected ? EditorTheme.Ink500 : EditorTheme.Ink400))
+                    .TextColor(isSubAsset ? EditorTheme.AccentText : (isSelected ? EditorTheme.OnAccent : EditorTheme.Ink400))
                     .FontSize(EditorTheme.FontSizeSmall).Alignment(TextAlignment.Center);
             }
 

@@ -633,7 +633,7 @@ public class TerrainEditor : CustomEditor
                     {
                         paper.Box($"{id}_add").Width(UnitValue.Stretch()).Height(70).Rounded(9)
                             .BorderColor(EditorTheme.BorderStrong).BorderWidth(1)
-                            .Hovered.BackgroundColor(EditorTheme.Selected).End()
+                            .Hovered.BackgroundColor(EditorTheme.Selected).TextColor(EditorTheme.OnAccent).End()
                             .OnClick(_ => onAdd())
                             .Icon(paper, EditorIcons.Plus_I, EditorTheme.InkDim, size: 18f);
                     }

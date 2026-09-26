@@ -235,7 +235,7 @@ public static class ProjectLauncher
             .Margin(leftM, rightM, UnitValue.StretchOne, UnitValue.StretchOne).Padding(14, 14, 0, 0)
             .BackgroundColor(on ? EditorTheme.Accent : Color.Transparent)
             .Text(label, EditorTheme.FontMedium ?? EditorTheme.DefaultFont)
-            .FontSize(13f * TS).TextColor(on ? EditorTheme.Ink700 : EditorTheme.Ink300).Alignment(TextAlignment.MiddleCenter)
+            .FontSize(13f * TS).TextColor(on ? EditorTheme.OnAccent : EditorTheme.Ink300).Alignment(TextAlignment.MiddleCenter)
             .OnClick(_ => _tab = index);
     }
 
@@ -445,9 +445,9 @@ public static class ProjectLauncher
                     .Enter())
                 {
                     P.Box("pl_ctal");
-                    IconBox(P, "pl_ctaico", EditorIcons.Bolt_I, 16, EditorTheme.Ink700, 1.4f, 0);
+                    IconBox(P, "pl_ctaico", EditorIcons.Bolt_I, 16, EditorTheme.OnAccent, 1.4f, 0);
                     P.Box("pl_ctatxt").Width(UnitValue.Auto).Height(UnitValue.Auto).Margin(8, 0, UnitValue.StretchOne, UnitValue.StretchOne)
-                        .Text(Loc.Get("launcher.create_project"), EditorTheme.FontSemiBold ?? font).FontSize(14f * TS).TextColor(EditorTheme.Ink700).Alignment(TextAlignment.MiddleLeft);
+                        .Text(Loc.Get("launcher.create_project"), EditorTheme.FontSemiBold ?? font).FontSize(14f * TS).TextColor(EditorTheme.OnAccent).Alignment(TextAlignment.MiddleLeft);
                     P.Box("pl_ctar");
                 }
             }
@@ -467,12 +467,12 @@ public static class ProjectLauncher
         {
             using (P.Box("pl_tplico0").Width(46).Height(46).Rounded(12).Margin(0, 0, 0, 11)
                 .BackgroundLinearGradient(0, 0, 1, 1, c1, c2).Enter())
-                P.Draw((vg, r) => DrawIcon(vg, r, EditorIcons.FileLines_I, 24, EditorTheme.Ink700, 1.3f));
+                P.Draw((vg, r) => DrawIcon(vg, r, EditorIcons.FileLines_I, 24, EditorTheme.OnAccent, 1.3f));
 
             P.Box("pl_tpln0").Height(UnitValue.Auto).Margin(0, 0, 0, 4)
-                .Text(Loc.Get("launcher.tpl_blank_name"), EditorTheme.FontSemiBold ?? font).FontSize(15f * TS).TextColor(EditorTheme.Ink500).Alignment(TextAlignment.MiddleLeft);
+                .Text(Loc.Get("launcher.tpl_blank_name"), EditorTheme.FontSemiBold ?? font).FontSize(15f * TS).TextColor(EditorTheme.OnAccent).Alignment(TextAlignment.MiddleLeft);
             P.Box("pl_tpld0").Height(UnitValue.Auto)
-                .Text(Loc.Get("launcher.tpl_blank_desc"), font).FontSize(12f * TS).TextColor(EditorTheme.Ink300).Alignment(TextAlignment.MiddleLeft);
+                .Text(Loc.Get("launcher.tpl_blank_desc"), font).FontSize(12f * TS).TextColor(EditorTheme.OnAccent).Alignment(TextAlignment.MiddleLeft);
         }
     }
 

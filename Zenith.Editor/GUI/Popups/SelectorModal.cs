@@ -198,7 +198,7 @@ public static class SelectorModal
             // None option always first
             paper.Box("sel_s_none")
                 .Height(EditorTheme.RowHeight).PaddingLeft(8)
-                .Hovered.BackgroundColor(EditorTheme.Purple400).End()
+                .Hovered.BackgroundColor(EditorTheme.Purple400).TextColor(EditorTheme.OnAccent).End()
                 .Rounded(3)
                 .Text($"{EditorIcons.Circle}  None ({_targetType.Name})", font)
                 .TextColor(EditorTheme.Ink400)
@@ -261,7 +261,7 @@ public static class SelectorModal
     {
         using (paper.Row(id)
             .Height(EditorTheme.RowHeight).PaddingLeft(8).Gap(4)
-            .Hovered.BackgroundColor(EditorTheme.Purple400).End()
+            .Hovered.BackgroundColor(EditorTheme.Purple400).TextColor(EditorTheme.OnAccent).End()
             .Rounded(3)
             .OnClick(value, (val, _) =>
             {
@@ -327,7 +327,7 @@ public static class SelectorModal
             // None option always first
             paper.Box("sel_a_none")
                 .Height(EditorTheme.RowHeight).PaddingLeft(8)
-                .Hovered.BackgroundColor(EditorTheme.Purple400).End()
+                .Hovered.BackgroundColor(EditorTheme.Purple400).TextColor(EditorTheme.OnAccent).End()
                 .Rounded(3)
                 .Text($"{EditorIcons.Circle}  None ({_targetType.Name})", font)
                 .TextColor(EditorTheme.Ink400)

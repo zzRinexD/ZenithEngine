@@ -166,33 +166,33 @@ public class SceneViewPanel : DockPanel
 
         paper.Box("sv_move_btn")
             .Width(24).Height(24).Rounded(6)
-            .BackgroundColor(isTranslate ? EditorTheme.Purple400 : Color.Transparent)
+            .BackgroundColor(isTranslate ? EditorTheme.Accent : Color.Transparent)
             .Hovered.BackgroundColor(EditorTheme.Hover).End()
-            .Text(EditorIcons.ArrowsUpDownLeftRight, font).TextColor(EditorTheme.Ink500)
+            .Text(EditorIcons.ArrowsUpDownLeftRight, font).TextColor(isTranslate ? EditorTheme.OnAccent : EditorTheme.Ink400)
             .FontSize(11f).Alignment(TextAlignment.MiddleCenter)
             .OnClick(0, (_, _) => SetGizmoMode(TransformTool.Translate));
 
         paper.Box("sv_rotate_btn")
             .Width(24).Height(24).Rounded(6)
-            .BackgroundColor(isRotate ? EditorTheme.Purple400 : Color.Transparent)
+            .BackgroundColor(isRotate ? EditorTheme.Accent : Color.Transparent)
             .Hovered.BackgroundColor(EditorTheme.Hover).End()
-            .Text(EditorIcons.ArrowsRotate, font).TextColor(EditorTheme.Ink500)
+            .Text(EditorIcons.ArrowsRotate, font).TextColor(isRotate ? EditorTheme.OnAccent : EditorTheme.Ink400)
             .FontSize(11f).Alignment(TextAlignment.MiddleCenter)
             .OnClick(0, (_, _) => SetGizmoMode(TransformTool.Rotate));
 
         paper.Box("sv_scale_btn")
             .Width(24).Height(24).Rounded(6)
-            .BackgroundColor(isScale ? EditorTheme.Purple400 : Color.Transparent)
+            .BackgroundColor(isScale ? EditorTheme.Accent : Color.Transparent)
             .Hovered.BackgroundColor(EditorTheme.Hover).End()
-            .Text(EditorIcons.Maximize, font).TextColor(EditorTheme.Ink500)
+            .Text(EditorIcons.Maximize, font).TextColor(isScale ? EditorTheme.OnAccent : EditorTheme.Ink400)
             .FontSize(11f).Alignment(TextAlignment.MiddleCenter)
             .OnClick(0, (_, _) => SetGizmoMode(TransformTool.Scale));
 
         paper.Box("sv_universal_btn")
             .Width(24).Height(24).Rounded(6)
-            .BackgroundColor(isUniversal ? EditorTheme.Purple400 : Color.Transparent)
+            .BackgroundColor(isUniversal ? EditorTheme.Accent : Color.Transparent)
             .Hovered.BackgroundColor(EditorTheme.Hover).End()
-            .Text(EditorIcons.Expand, font).TextColor(EditorTheme.Ink500)
+            .Text(EditorIcons.Expand, font).TextColor(isUniversal ? EditorTheme.OnAccent : EditorTheme.Ink400)
             .FontSize(11f).Alignment(TextAlignment.MiddleCenter)
             .OnClick(0, (_, _) => SetGizmoMode(TransformTool.Universal));
     }

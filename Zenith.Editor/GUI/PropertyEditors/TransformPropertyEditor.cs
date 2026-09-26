@@ -98,7 +98,7 @@ public class TransformPropertyEditor : PropertyEditor
                     .Width(20).Height(EditorTheme.RowHeight)
                     .Text(EditorIcons.CircleDot, font).TextColor(EditorTheme.Ink400)
                     .FontSize(12f).Alignment(TextAlignment.MiddleCenter)
-                    .Hovered.BackgroundColor(EditorTheme.Purple400).End()
+                    .Hovered.BackgroundColor(EditorTheme.Purple400).TextColor(EditorTheme.OnAccent).End()
                     .Rounded(3)
                     .OnClick(onChange, (cb, _) =>
                         SelectorModal.Open("Select Transform", typeof(Transform), SelectorTabs.Scene, cb));

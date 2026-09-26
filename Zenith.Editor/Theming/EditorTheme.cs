@@ -369,6 +369,8 @@ public static class EditorTheme
     public static Color AccentBright => T.Primary.C600;
     /// <summary>Light accent for text / small highlights.</summary>
     public static Color AccentText => T.Primary.C700;
+    /// <summary>Text and icon color for elements sitting on top of a light/accent background. Should match the dark base color.</summary>
+    public static readonly Color OnAccent = Color.FromArgb(255, 0x12, 0x12, 0x12);
 
     /// <summary> Hover highlight overlay color (subtle warm white at ~6%). </summary>
     public static Color Hover => WithAlpha(Accent, 15);
