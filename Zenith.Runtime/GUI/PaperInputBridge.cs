@@ -17,6 +17,8 @@ namespace Prowl.Runtime.GUI;
 /// </summary>
 public static class PaperInputBridge
 {
+    public static bool SuppressKeyboardForEditor { get; set; } = false;
+
     private static readonly (KeyCode Key, PaperKey Mapped)[] s_keyMap = BuildKeyMap();
 
     public static void Pump(Paper paper, Float2 pointerPos, bool receivesInput = true)
@@ -44,15 +46,18 @@ public static class PaperInputBridge
             paper.SetPointerWheel(wheelDelta);
 
         // InputString is read non-destructively, so every Paper and any user UI sees the same characters.
-        foreach (char ch in Input.InputString)
-            paper.AddInputCharacter(ch.ToString());
-
-        foreach ((KeyCode key, PaperKey mapped) in s_keyMap)
+        if (!SuppressKeyboardForEditor)
         {
-            if (Input.GetKeyDown(key))
-                paper.SetKeyState(mapped, true);
-            else if (Input.GetKeyUp(key))
-                paper.SetKeyState(mapped, false);
+            foreach (char ch in Input.InputString)
+                paper.AddInputCharacter(ch.ToString());
+
+            foreach ((KeyCode key, PaperKey mapped) in s_keyMap)
+            {
+                if (Input.GetKeyDown(key))
+                    paper.SetKeyState(mapped, true);
+                else if (Input.GetKeyUp(key))
+                    paper.SetKeyState(mapped, false);
+            }
         }
     }
 

@@ -36,6 +36,8 @@ public class EditorApplication : Game
     /// <summary>The editor's PropertyGrid configuration (drawers, handlers, callbacks).</summary>
     public static OrigamiUI.PropertyGridConfig PropertyGridConfig { get; private set; } = null!;
 
+    private static bool _clearFocusNextFrame;
+
     private DockSpace _dockSpace = null!;
     private GUI.NebulaBackground? _nebula;
     private double _introTime = double.MaxValue;
@@ -574,16 +576,25 @@ public class EditorApplication : Game
             // Ghost buttons tint their icon by variant: green Play when stopped, red Stop while playing,
             // amber Pause when paused; step stays neutral.
             var play = Origami.IconButton(paper, "btn_play", Application.IsPlaying ? EditorIcons.CircleStop_I : EditorIcons.Play_I)
-                .OnClick(RequestTogglePlayMode)
+                .OnClick(() => {
+                    RequestTogglePlayMode();
+                    paper.ClearFocus();
+                })
                 .Style(ButtonStyle.Ghost);
             if (Application.IsPlaying) play.Danger(); else play.Success();
             play.Show();
 
-            var pause = Origami.IconButton(paper, "btn_pause", EditorIcons.Pause_I, TogglePause).Style(ButtonStyle.Ghost);
+            var pause = Origami.IconButton(paper, "btn_pause", EditorIcons.Pause_I, () => {
+                TogglePause();
+                paper.ClearFocus();
+            }).Style(ButtonStyle.Ghost);
             if (Application.IsPaused) pause.Warning();
             pause.Show();
 
-            Origami.IconButton(paper, "btn_step", EditorIcons.ForwardStep_I, StepOneFrame)
+            Origami.IconButton(paper, "btn_step", EditorIcons.ForwardStep_I, () => {
+                StepOneFrame();
+                paper.ClearFocus();
+            })
                 .Style(ButtonStyle.Ghost).Show();
         }
     }
@@ -1573,6 +1584,7 @@ public class EditorApplication : Game
         Application.IsPaused = false;
         Application.StepRequested = false;
         ResetFixedTimeAccumulator();
+        Prowl.Runtime.GUI.PaperInputBridge.SuppressKeyboardForEditor = true;
 
         // Push fresh play-mode time (game code sees Time.TimeSinceStartup = 0)
         _savedEditorTime = Runtime.Time.CurrentTime;
@@ -1610,6 +1622,7 @@ public class EditorApplication : Game
         Application.IsPlaying = false;
         Application.IsPaused = false;
         Application.StepRequested = false;
+        Prowl.Runtime.GUI.PaperInputBridge.SuppressKeyboardForEditor = false;
 
         // Clear selection (play scene references)
         Selection.Clear();
