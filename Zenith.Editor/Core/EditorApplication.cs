@@ -135,12 +135,6 @@ public class EditorApplication : Game
 
         EditorRegistries.Initialize();
 
-        // Cursor lock toasts
-        Input.OnCursorLocked += () =>
-            Toasts.Show(Loc.Get("toast.cursor_locked"), Loc.Get("toast.cursor_locked_msg"), ToastType.Info, 3f);
-        Input.OnCursorLockFailed += () =>
-            Toasts.Show(Loc.Get("toast.cursor_lock_failed"), Loc.Get("toast.cursor_lock_failed_msg"), ToastType.Warning, 3f);
-
         RegisterMenus();
 
         if (projectAlreadyInitialized)
