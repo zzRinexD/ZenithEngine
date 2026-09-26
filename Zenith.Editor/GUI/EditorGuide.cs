@@ -64,21 +64,14 @@ public static class EditorGuide
 
     // ---- target sources ------------------------------------------------
     private static DockSpace? _dock;
-    private static (float x, float y, float w, float h)? _themeButton;
 
     /// <summary> Registers the DockSpace used to resolve panel targets. </summary>
     public static void SetDockSpace(DockSpace dock) => _dock = dock;
-    /// <summary> Registers the screen-space rect of the Theme quick-access button. </summary>
-    public static void RegisterThemeButton(float x, float y, float w, float h) => _themeButton = (x, y, w, h);
-
     /// <summary>Target the docked panel of the given type (searches tabs; works after the layout shifts).</summary>
     public static GuideTarget Panel(Type panelType) => () =>
         _dock != null && _dock.TryGetPanelRect(panelType, out var r)
             ? ((float)r.Min.X, (float)r.Min.Y, (float)r.Size.X, (float)r.Size.Y)
             : ((float, float, float, float)?)null;
-
-    /// <summary>Target the header's Theme quick-access button.</summary>
-    public static GuideTarget ThemeButton() => () => _themeButton;
 
     // ---- lifecycle -----------------------------------------------------
 
@@ -316,6 +309,5 @@ public static class EditorGuide
         .Add(new GuideStep { TitleKey = "guide.scene.title", BodyKey = "guide.scene.body", TipKey = "guide.scene.tip", Icon = EditorIcons.Cube, Target = Panel(typeof(Panels.SceneViewPanel)) })
         .Add(new GuideStep { TitleKey = "guide.inspector.title", BodyKey = "guide.inspector.body", TipKey = "guide.inspector.tip", Icon = EditorIcons.Sliders, Target = Panel(typeof(Panels.InspectorPanel)) })
         .Add(new GuideStep { TitleKey = "guide.project.title", BodyKey = "guide.project.body", TipKey = "guide.project.tip", Icon = EditorIcons.FolderOpen, Target = Panel(typeof(Panels.ProjectPanel)) })
-        .Add(new GuideStep { TitleKey = "guide.console.title", BodyKey = "guide.console.body", TipKey = "guide.console.tip", Icon = EditorIcons.Terminal, Target = Panel(typeof(Panels.ConsolePanel)) })
-        .Add(new GuideStep { TitleKey = "guide.theme.title", BodyKey = "guide.theme.body", Icon = EditorIcons.Palette, Target = ThemeButton() });
+        .Add(new GuideStep { TitleKey = "guide.console.title", BodyKey = "guide.console.body", TipKey = "guide.console.tip", Icon = EditorIcons.Terminal, Target = Panel(typeof(Panels.ConsolePanel)) });
 }

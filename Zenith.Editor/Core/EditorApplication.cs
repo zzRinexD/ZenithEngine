@@ -754,40 +754,31 @@ public class EditorApplication : Game
         float pad = EditorTheme.DockPadding;
         float barH = HeaderChipHeight;
         var font = EditorTheme.DefaultFont;
-        // Menu labels + a Theme quick-access button, pinned to the left edge and vertically centered by
-        // margins; auto width hugs the menus.
+        // Menu labels pinned to the left edge and vertically centered by margins; auto width hugs the menus.
         using (paper.Row("menubar_host").PositionType(PositionType.SelfDirected)
             .Width(UnitValue.Auto).Height(barH)
             .Margin(UnitValue.Pixels(pad), UnitValue.StretchOne, UnitValue.StretchOne, UnitValue.StretchOne).Gap(4).Enter())
         {
             var bar = Origami.MenuBar(paper, "menubar").Height(barH);
             foreach (var root in MenuRegistry.RootMenus)
-                if (root.HasSubItems)
-                    bar.Menu(root.Label, ctx =>
-                    {
-                        // A menu-bar dropdown has no object of its own to act on, so drop any pin a
-                        // panel's right-click menu left behind; GameObject/... then creates under the
-                        // active selection instead of wherever that menu was last opened.
-                        MenuContext.Clear();
-                        BuildMenu(ctx, root.SubItems);
-                    });
+            {
+                if (!root.HasSubItems)
+                    continue;
+
+                // "Assets" and "GameObject" are intentionally hidden from the top bar:
+                // their commands remain available from the Project and Hierarchy context menus.
+                string label = root.Label;
+                if (label == "Assets" || label == "GameObject")
+                    continue;
+
+                bar.Menu(label, ctx =>
+                {
+                    MenuContext.Clear();
+                    BuildMenu(ctx, root.SubItems);
+                });
+            }
             bar.Show();
 
-            // Quick-access to Preferences > Theme (theming is a big part of the editor now).
-            paper.Box("hdr_theme_btn").Width(barH).Height(barH)
-                .Margin(0, 0, UnitValue.Stretch(), UnitValue.Stretch()).Rounded(7)
-                .Hovered.BackgroundColor(EditorTheme.Hover).End()
-                .Text(EditorIcons.Palette, font).TextColor(EditorTheme.Ink400)
-                .Hovered.TextColor(EditorTheme.Ink500).End()
-                .FontSize(EditorTheme.FontSizeSmall).Alignment(TextAlignment.MiddleCenter)
-                .Tooltip(Loc.Get("header.theme_settings"))
-                .OnPostLayout((h2, rect) => GUI.EditorGuide.RegisterThemeButton(
-                    (float)rect.Min.X, (float)rect.Min.Y, (float)rect.Size.X, (float)rect.Size.Y))
-                .OnClick(0, (_, _) =>
-                {
-                    OpenPanel(typeof(GUI.Panels.PreferencesPanel));
-                    (FindOpenPanel(typeof(GUI.Panels.PreferencesPanel)) as GUI.Panels.PreferencesPanel)?.ShowTheme();
-                });
         }
     }
 
