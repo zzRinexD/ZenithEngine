@@ -623,19 +623,16 @@ public class EditorApplication : Game
         }
     }
 
-    /// <summary>Right-side status cluster: FPS, editor version and project name as themed chips,
+    /// <summary>Right-side status cluster: FPS and editor version as themed chips,
     /// then a ghost cog that opens Project Settings.</summary>
     private void DrawHeaderStatus(Paper paper, float w, float band, Prowl.Scribe.FontFile font)
     {
         float clH = HeaderChipHeight;
         float pad = EditorTheme.DockPadding;
         float blur = Origami.Current.Metrics.WindowBackdropBlur;
-        float rectPadX = 10f, dot = 8f;
+        float rectPadX = 10f;
 
         int fps = _dispFps;
-        string fpsNum = fps.ToString();
-        string msText = $"{_dispMs:F1}ms";
-        var dotColor = fps >= 50 ? EditorTheme.Green400 : (fps >= 25 ? EditorTheme.Amber400 : EditorTheme.Red400);
 
         string version = Assembly.GetExecutingAssembly()
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
@@ -643,7 +640,6 @@ public class EditorApplication : Game
         int plus = version.IndexOf('+');
         if (plus >= 0) version = version[..plus];
         string versionText = $"v{version}";
-        string projectText = Project.Current?.Name ?? Loc.Get("editor.no_project");
 
         // Cluster pinned to the right edge and vertically centered by margins; every child auto-sizes to
         // its text, so there's no width math or MeasureText.
@@ -651,28 +647,22 @@ public class EditorApplication : Game
             .Width(UnitValue.Auto).Height(clH)
             .Margin(UnitValue.StretchOne, UnitValue.Pixels(pad), UnitValue.StretchOne, UnitValue.StretchOne).Gap(6).Enter())
         {
-            // FPS chip: [glowing dot + count] left-anchored, [FPS + X.Xms] right-anchored, spacer between.
-            // Auto width with a 120px floor lets the count grow into the spacer without moving anything.
-            using (paper.Row("hs_fps").Width(UnitValue.Auto).MinWidth(UnitValue.Pixels(120)).Height(clH).Rounded(7)
-                .Padding(rectPadX, rectPadX, 0, 0).BackdropBlur(blur)
-                .BackgroundColor(EditorTheme.Glass).BorderColor(EditorTheme.BorderSoft).BorderWidth(1).Enter())
-            {
-                paper.Box("hs_fps_dot").Width(dot).Height(dot).Margin(0, 7, UnitValue.StretchOne, UnitValue.StretchOne).Rounded(dot / 2f)
-                    .BackgroundColor(dotColor).Glow(0, 0, 8, 0, dotColor).IsNotInteractable();
-                paper.Box("hs_fps_num").Width(UnitValue.Auto).Height(clH).Margin(0, 0, UnitValue.StretchOne, UnitValue.StretchOne).IsNotInteractable()
-                    .Text(fpsNum, font).TextColor(EditorTheme.Ink500).FontSize(EditorTheme.FontSize)
-                    .Alignment(TextAlignment.MiddleLeft);
-                paper.Box("hs_fps_sp").Height(1).IsNotInteractable();
-                paper.Box("hs_fps_lbl").Width(UnitValue.Auto).Height(clH).Margin(0, 4, UnitValue.StretchOne, UnitValue.StretchOne).IsNotInteractable()
-                    .Text("FPS", font).TextColor(EditorTheme.Ink300).FontSize(EditorTheme.FontSizeSmall)
-                    .Alignment(TextAlignment.MiddleRight);
-                paper.Box("hs_fps_ms").Width(UnitValue.Auto).MinWidth(UnitValue.Pixels(33)).Height(clH).Margin(0, 0, UnitValue.StretchOne, UnitValue.StretchOne).IsNotInteractable()
-                    .Text(msText, font).TextColor(EditorTheme.Ink300).FontSize(EditorTheme.FontSizeSmall)
-                    .Alignment(TextAlignment.MiddleRight);
-            }
+            // FPS chip: [count + label] left-anchored. Auto width, no floor.
+            paper.Box("hs_fps")
+                .Height(clH).Rounded(7)
+                .MinWidth(UnitValue.Pixels(60))
+                .Padding(rectPadX, rectPadX, 0, 0)
+                .BackdropBlur(blur)
+                .BackgroundColor(EditorTheme.Glass)
+                .BorderColor(EditorTheme.BorderSoft)
+                .BorderWidth(1)
+                .IsNotInteractable()
+                .Text($"{fps} FPS", font)
+                .TextColor(EditorTheme.Ink400)
+                .FontSize(EditorTheme.FontSizeSmall)
+                .Alignment(TextAlignment.MiddleCenter);
 
             StatusChip(paper, "hs_ver", clH, versionText, font);
-            StatusChip(paper, "hs_proj", clH, projectText, font);
 
             paper.Box("hs_cog").Width(clH).Height(clH).Rounded(7)
                 .Hovered.BackgroundColor(EditorTheme.Hover).End()
