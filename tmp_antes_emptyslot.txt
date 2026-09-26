@@ -1,0 +1,10 @@
+// ANTES — EmptySlot (líneas 435-443)
+    private static void EmptySlot(Paper P, int idx, int col)
+    {
+        using (P.Column("pl_tpl" + idx).Margin(col == 0 ? 0 : 6, col == 1 ? 0 : 6, 0, 0)
+            .Rounded(12)
+            .BackgroundColor(Col(255, 255, 255, 0.015f))
+            .BorderColor(EditorTheme.BorderSoft).BorderWidth(1)
+            .Enter())
+        { }
+    }

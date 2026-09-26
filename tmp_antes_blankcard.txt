@@ -1,0 +1,20 @@
+// ANTES — BlankCard (líneas 414-432)
+    private static void BlankCard(Paper P, Scribe.FontFile font, int col)
+    {
+        (Color c1, Color c2) = GlyphColors(0.0, true);
+        using (P.Column("pl_tpl0").Margin(col == 0 ? 0 : 6, col == 1 ? 0 : 6, 0, 0)
+            .Rounded(12).Padding(17, 17, 17, 17)
+            .BackgroundColor(EditorTheme.Selected)
+            .BorderColor(EditorTheme.Accent).BorderWidth(1.5f)
+            .Enter())
+        {
+            using (P.Box("pl_tplico0").Width(46).Height(46).Rounded(12).Margin(0, 0, 0, 11)
+                .BackgroundLinearGradient(0, 0, 1, 1, c1, c2).Enter())
+                P.Draw((vg, r) => DrawIcon(vg, r, EditorIcons.FileLines_I, 24, EditorTheme.OnAccent, 1.3f));
+
+            P.Box("pl_tpln0").Height(UnitValue.Auto).Margin(0, 0, 0, 4)
+                .Text(Loc.Get("launcher.tpl_blank_name"), EditorTheme.FontSemiBold ?? font).FontSize(15f * TS).TextColor(EditorTheme.OnAccent).Alignment(TextAlignment.MiddleLeft);
+            P.Box("pl_tpld0").Height(UnitValue.Auto)
+                .Text(Loc.Get("launcher.tpl_blank_desc"), font).FontSize(12f * TS).TextColor(EditorTheme.OnAccent).Alignment(TextAlignment.MiddleLeft);
+        }
+    }

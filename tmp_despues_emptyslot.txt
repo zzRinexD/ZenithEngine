@@ -1,0 +1,30 @@
+// DESPUÉS — EmptySlot (líneas 455-484 aprox)
+    private static void EmptySlot(Paper P, Scribe.FontFile font, int idx, int col)
+    {
+        var bgNormal = Color.FromArgb(20, 255, 255, 255);
+        var bgHover = Color.FromArgb(40, 255, 255, 255);
+        var borderNormal = Color.FromArgb(40, 255, 255, 255);
+        var borderHover = Color.FromArgb(70, 255, 255, 255);
+        var textColor = Color.FromArgb(80, 255, 255, 255);
+
+        using (P.Column("pl_tpl" + idx).Margin(col == 0 ? 0 : 6, col == 1 ? 0 : 6, 0, 0)
+            .Rounded(12)
+            .BackgroundColor(bgNormal)
+            .BorderColor(borderNormal).BorderWidth(1)
+            .Transition(GuiProp.BackgroundColor, 0.15f)
+            .Transition(GuiProp.BorderColor, 0.15f)
+            .Hovered
+                .BackgroundColor(bgHover)
+                .BorderColor(borderHover)
+                .End()
+            .Enter())
+        {
+            // Subtle placeholder text to indicate reserved space
+            using (P.Box("pl_tpltxt" + idx).Height(UnitValue.Auto).Margin(0, 30, 0, 30).Enter())
+                P.Box("pl_tpltxtinner" + idx)
+                    .Text("Próximamente", font)
+                    .FontSize(11f * TS)
+                    .TextColor(textColor)
+                    .Alignment(TextAlignment.MiddleCenter);
+        }
+    }

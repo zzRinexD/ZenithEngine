@@ -34,6 +34,7 @@ public static class ProjectLauncher
     private static int _tab;   // 0 = Recent, 1 = New Project
     private static float _animTime;
     private static NebulaBackground? _nebula;
+    private static int _tplSel = 0; // selected template index (default: Blank)
 
     // Favorite-star icon in both Font Awesome weights: outline when unfavored, filled when favored.
     // EditorGlyphIcon resolves the face at draw time, so building these before fonts load is fine.
@@ -49,41 +50,6 @@ public static class ProjectLauncher
     private static Color InputBd => Color.FromArgb(41, EditorTheme.Accent.R, EditorTheme.Accent.G, EditorTheme.Accent.B);
     private static Color CardBg => Col(255, 255, 255, 0.025f);
 
-    // Cycled tip strip drawn at the bottom of the launcher background.
-    private static readonly string[] _tipKeys =
-    {
-        "launcher.tip.orbit",
-        "launcher.tip.dolly",
-        "launcher.tip.pan",
-        "launcher.tip.fly",
-        "launcher.tip.fly_speed",
-        "launcher.tip.fly_updown",
-        "launcher.tip.focus",
-        "launcher.tip.gizmos",
-        "launcher.tip.snap",
-        "launcher.tip.duplicate",
-        "launcher.tip.rename",
-        "launcher.tip.math",
-        "launcher.tip.math_ops",
-        "launcher.tip.drag_asset",
-        "launcher.tip.orient_cube",
-        "launcher.tip.undo",
-        "launcher.tip.discord",
-        "launcher.tip.assignref",
-        "launcher.tip.pingref",
-        "launcher.tip.pickref",
-        "launcher.tip.go_to_component",
-        "launcher.tip.create_menu",
-        "launcher.tip.component_menu",
-        "launcher.tip.escape_unlock",
-        "launcher.tip.nuget",
-    };
-
-    private const float _tipDuration = 8f;
-    private const float _tipFadeTime = 0.45f;
-    private static int _tipIndex;
-    private static float _tipTimer;
-
     /// <summary> Sets the default new-project path and resets the launcher to its initial state. </summary>
     public static void Initialize()
     {
@@ -92,14 +58,6 @@ public static class ProjectLauncher
         var recent = RecentProjects.FavoritesFirst();
         _tab = recent.Count == 0 ? 1 : 0;
         _animTime = 0;
-        _tipIndex = Random.Shared.Next(_tipKeys.Length);
-        _tipTimer = 0;
-    }
-
-    private static void AdvanceTip()
-    {
-        _tipIndex = (_tipIndex + 1) % _tipKeys.Length;
-        _tipTimer = 0;
     }
 
     /// <summary> Closes the project launcher. </summary>
@@ -305,7 +263,6 @@ public static class ProjectLauncher
                 .BackgroundColor(EditorTheme.Hover)
                 .BorderColor(EditorTheme.BorderStrong)
                 .Translate(3, 0)
-                .Glow(0, 10, 26, -6, Color.FromArgb(140, EditorTheme.Purple400))
                 .End()
             .OnClick(entry, (e, _) => { if (Directory.Exists(e.Path)) TryOpenProject(e.Path); })
             .Enter())
@@ -440,7 +397,6 @@ public static class ProjectLauncher
 
                 using (P.Row("pl_cta").Height(44).Rounded(11)
                     .BackgroundLinearGradient(0, 0, 1, 1, EditorTheme.Accent, EditorTheme.AccentBright)
-                    .Glow(0, 8, 26, -4, Color.FromArgb(153, EditorTheme.Purple400))
                     .OnClick(_ => TryCreateProject())
                     .Enter())
                 {
@@ -458,31 +414,62 @@ public static class ProjectLauncher
     // placeholder slots to signal that more templates are coming.
     private static void BlankCard(Paper P, Scribe.FontFile font, int col)
     {
-        (Color c1, Color c2) = GlyphColors(0.0, true);
+        bool selected = _tplSel == 0;
+        var bgNormal = Color.FromArgb(255, 0x1A, 0x1A, 0x1A);
+        var bgSelected = Color.FromArgb(255, 0x1E, 0x1E, 0x1E);
+        var bgHover = Color.FromArgb(255, 0x24, 0x24, 0x24);
+        var borderNormal = Color.FromArgb(255, 0x2A, 0x2A, 0x2A);
+        var borderHover = Color.FromArgb(255, 0x3A, 0x3A, 0x3A);
+        var titleColor = EditorTheme.Ink500;
+        var subColor = Color.FromArgb(255, 0x8A, 0x8A, 0x8A);
+
         using (P.Column("pl_tpl0").Margin(col == 0 ? 0 : 6, col == 1 ? 0 : 6, 0, 0)
             .Rounded(12).Padding(17, 17, 17, 17)
-            .BackgroundColor(EditorTheme.Selected)
-            .BorderColor(EditorTheme.Accent).BorderWidth(1.5f)
+            .BackgroundColor(selected ? bgSelected : bgNormal)
+            .BorderColor(selected ? EditorTheme.Accent : borderNormal)
+            .BorderWidth(selected ? 2f : 1f)
+            .Transition(GuiProp.BackgroundColor, 0.15f)
+            .Transition(GuiProp.BorderColor, 0.15f)
+            .Hovered
+                .BackgroundColor(bgHover)
+                .BorderColor(borderHover)
+                .End()
+            .OnClick(_ => _tplSel = 0)
             .Enter())
         {
             using (P.Box("pl_tplico0").Width(46).Height(46).Rounded(12).Margin(0, 0, 0, 11)
-                .BackgroundLinearGradient(0, 0, 1, 1, c1, c2).Enter())
-                P.Draw((vg, r) => DrawIcon(vg, r, EditorIcons.FileLines_I, 24, EditorTheme.OnAccent, 1.3f));
+                .BackgroundLinearGradient(0, 0, 1, 1, Color.FromArgb(255, 168, 85, 247), Color.FromArgb(255, 217, 107, 216))
+                .Hovered
+                    .BackgroundLinearGradient(0, 0, 1, 1, Color.FromArgb(255, 217, 107, 216), Color.FromArgb(255, 240, 200, 255))
+                    .End()
+                .Enter())
+                P.Draw((vg, r) => DrawIcon(vg, r, EditorIcons.FileLines_I, 24, Color.White, 1.3f));
 
             P.Box("pl_tpln0").Height(UnitValue.Auto).Margin(0, 0, 0, 4)
-                .Text(Loc.Get("launcher.tpl_blank_name"), EditorTheme.FontSemiBold ?? font).FontSize(15f * TS).TextColor(EditorTheme.OnAccent).Alignment(TextAlignment.MiddleLeft);
+                .Text(Loc.Get("launcher.tpl_blank_name"), EditorTheme.FontSemiBold ?? font).FontSize(15f * TS).TextColor(titleColor).Alignment(TextAlignment.MiddleLeft);
             P.Box("pl_tpld0").Height(UnitValue.Auto)
-                .Text(Loc.Get("launcher.tpl_blank_desc"), font).FontSize(12f * TS).TextColor(EditorTheme.OnAccent).Alignment(TextAlignment.MiddleLeft);
+                .Text(Loc.Get("launcher.tpl_blank_desc"), font).FontSize(12f * TS).TextColor(subColor).Alignment(TextAlignment.MiddleLeft);
         }
     }
 
     // Placeholder for a future template: the card frame with no content inside.
     private static void EmptySlot(Paper P, int idx, int col)
     {
+        var bgNormal = Color.FromArgb(20, 255, 255, 255);
+        var bgHover = Color.FromArgb(40, 255, 255, 255);
+        var borderNormal = Color.FromArgb(40, 255, 255, 255);
+        var borderHover = Color.FromArgb(70, 255, 255, 255);
+
         using (P.Column("pl_tpl" + idx).Margin(col == 0 ? 0 : 6, col == 1 ? 0 : 6, 0, 0)
             .Rounded(12)
-            .BackgroundColor(Col(255, 255, 255, 0.015f))
-            .BorderColor(EditorTheme.BorderSoft).BorderWidth(1)
+            .BackgroundColor(bgNormal)
+            .BorderColor(borderNormal).BorderWidth(1)
+            .Transition(GuiProp.BackgroundColor, 0.15f)
+            .Transition(GuiProp.BorderColor, 0.15f)
+            .Hovered
+                .BackgroundColor(bgHover)
+                .BorderColor(borderHover)
+                .End()
             .Enter())
         { }
     }
@@ -551,75 +538,6 @@ public static class ProjectLauncher
         {
             if (path != null) _newProjectPath = path;
         }, _newProjectPath);
-    }
-
-    /// <summary>
-    /// Draws the cycling tip strip at the bottom of the screen. Called separately from
-    /// <see cref="Draw"/> so it can render on top of the intro animation while the project loads.
-    /// </summary>
-    public static void DrawTipStrip(Paper paper, float dt, float globalAlpha = 1f)
-    {
-        if (globalAlpha <= 0f) return;
-
-        var font = EditorTheme.DefaultFont;
-        if (font == null) return;
-
-        float w = paper.ScreenRect.Size.X;
-        float h = paper.ScreenRect.Size.Y;
-
-        _tipTimer += dt;
-        if (_tipTimer >= _tipDuration)
-            AdvanceTip();
-
-        float fadeIn = Math.Min(_tipTimer / _tipFadeTime, 1f);
-        float fadeOut = Math.Min((_tipDuration - _tipTimer) / _tipFadeTime, 1f);
-        float alpha = Math.Clamp(Math.Min(fadeIn, fadeOut), 0f, 1f) * Math.Clamp(globalAlpha, 0f, 1f);
-
-        var iconBase = EditorTheme.Purple500;
-        var textBase = EditorTheme.Ink400;
-        var labelBase = EditorTheme.Ink300;
-        var iconColor = Color.FromArgb((int)(iconBase.A * alpha), iconBase.R, iconBase.G, iconBase.B);
-        var textColor = Color.FromArgb((int)(textBase.A * alpha), textBase.R, textBase.G, textBase.B);
-        var labelColor = Color.FromArgb((int)(labelBase.A * alpha), labelBase.R, labelBase.G, labelBase.B);
-
-        const float stripHeight = 36f;
-        float y = h - stripHeight - 16f;
-        string tipText = Loc.Get(_tipKeys[_tipIndex]);
-
-        using (paper.Row("pl_tip_strip")
-            .PositionType(PositionType.SelfDirected)
-            .Position(0, y)
-            .Size(w, stripHeight)
-            .JustifyContent(LayoutJustification.Center)
-
-            .Gap(6)
-            .OnClick(_ => AdvanceTip())
-            .Enter())
-        {
-            paper.Box("pl_tip_icon")
-                .Width(20)
-                .Height(stripHeight)
-                .Text(EditorIcons.Lightbulb, font)
-                .TextColor(iconColor)
-                .FontSize(EditorTheme.FontSize)
-                .Alignment(TextAlignment.MiddleCenter);
-
-            paper.Box("pl_tip_label")
-                .Width(UnitValue.Auto)
-                .Height(stripHeight)
-                .Text(Loc.Get("launcher.tip_label"), font)
-                .TextColor(labelColor)
-                .FontSize(EditorTheme.FontSizeSmall)
-                .Alignment(TextAlignment.MiddleLeft);
-
-            paper.Box("pl_tip_text")
-                .Width(UnitValue.Auto)
-                .Height(stripHeight)
-                .Text(tipText, font)
-                .TextColor(textColor)
-                .FontSize(EditorTheme.FontSizeSmall)
-                .Alignment(TextAlignment.MiddleLeft);
-        }
     }
 
     private static void TryOpenProject(string path)
