@@ -552,44 +552,41 @@ public class EditorApplication : Game
         using (paper.Box("header").PositionType(PositionType.SelfDirected).Position(0, 0).Size(w, band).Enter())
         {
             DrawMenuBar(paper, w, band);
-            DrawPlayPill(paper, w, band, font);
-            DrawHeaderStatus(paper, w, band, font);
-        }
-    }
 
-    /// <summary>Centered rounded "pill" holding the play / pause / step transport buttons.</summary>
-    private void DrawPlayPill(Paper paper, float w, float band, Prowl.Scribe.FontFile font)
-    {
-        using (paper.Row("play_pill").PositionType(PositionType.SelfDirected)
-            .Size(UnitValue.Auto).Rounded(EditorTheme.Roundness)
-            .Margin(UnitValue.StretchOne)
-            .BackdropBlur(Origami.Current.Metrics.WindowBackdropBlur)
-            .BackgroundColor(EditorTheme.Glass).BorderColor(EditorTheme.BorderSoft).BorderWidth(1)
-            .Enter())
-        {
-            // Ghost buttons tint their icon by variant: green Play when stopped, red Stop while playing,
-            // amber Pause when paused; step stays neutral.
-            var play = Origami.IconButton(paper, "btn_play", Application.IsPlaying ? EditorIcons.CircleStop_I : EditorIcons.Play_I)
-                .OnClick(() => {
-                    RequestTogglePlayMode();
+            // Transport buttons (Play / Pause / Step) — flat, centered, original position, no pill.
+            using (paper.Row("play_pill").PositionType(PositionType.SelfDirected)
+                .Size(UnitValue.Auto)
+                .Rounded(EditorTheme.Roundness)
+                .Margin(UnitValue.StretchOne)
+                .BackdropBlur(Origami.Current.Metrics.WindowBackdropBlur)
+                .BackgroundColor(EditorTheme.Glass)
+                .BorderColor(EditorTheme.BorderSoft)
+                .BorderWidth(1)
+                .Gap(6).Enter())
+            {
+                var play = Origami.IconButton(paper, "btn_play", Application.IsPlaying ? EditorIcons.CircleStop_I : EditorIcons.Play_I)
+                    .OnClick(() => {
+                        RequestTogglePlayMode();
+                        paper.ClearFocus();
+                    })
+                    .Style(ButtonStyle.Ghost);
+                if (Application.IsPlaying) play.Danger(); else play.Success();
+                play.Show();
+
+                var pause = Origami.IconButton(paper, "btn_pause", EditorIcons.Pause_I, () => {
+                    TogglePause();
                     paper.ClearFocus();
-                })
-                .Style(ButtonStyle.Ghost);
-            if (Application.IsPlaying) play.Danger(); else play.Success();
-            play.Show();
+                }).Style(ButtonStyle.Ghost);
+                if (Application.IsPaused) pause.Warning();
+                pause.Show();
 
-            var pause = Origami.IconButton(paper, "btn_pause", EditorIcons.Pause_I, () => {
-                TogglePause();
-                paper.ClearFocus();
-            }).Style(ButtonStyle.Ghost);
-            if (Application.IsPaused) pause.Warning();
-            pause.Show();
+                Origami.IconButton(paper, "btn_step", EditorIcons.ForwardStep_I, () => {
+                    StepOneFrame();
+                    paper.ClearFocus();
+                }).Style(ButtonStyle.Ghost).Show();
+            }
 
-            Origami.IconButton(paper, "btn_step", EditorIcons.ForwardStep_I, () => {
-                StepOneFrame();
-                paper.ClearFocus();
-            })
-                .Style(ButtonStyle.Ghost).Show();
+            DrawHeaderStatus(paper, w, band, font);
         }
     }
 
@@ -723,7 +720,7 @@ public class EditorApplication : Game
         // Menu labels pinned to the left edge and vertically centered by margins; auto width hugs the menus.
         using (paper.Row("menubar_host").PositionType(PositionType.SelfDirected)
             .Width(UnitValue.Auto).Height(barH)
-            .Margin(UnitValue.Pixels(pad), UnitValue.StretchOne, UnitValue.StretchOne, UnitValue.StretchOne).Gap(4).Enter())
+            .Margin(UnitValue.Pixels(pad), UnitValue.StretchOne, UnitValue.StretchOne, UnitValue.StretchOne).Gap(6).Enter())
         {
             var bar = Origami.MenuBar(paper, "menubar").Height(barH);
             foreach (var root in MenuRegistry.RootMenus)
@@ -744,7 +741,6 @@ public class EditorApplication : Game
                 });
             }
             bar.Show();
-
         }
     }
 
