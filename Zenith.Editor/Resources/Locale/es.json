@@ -23,6 +23,10 @@
 
   "scene.show_grid": "Mostrar cuadricula",
   "scene.show_gizmos": "Mostrar gizmos",
+  "scene.navigation": "Navegacion",
+  "scene.navmesh_always_show": "Mostrar NavMesh siempre",
+  "scene.navmesh_show_detail": "Mostrar detalle de altura del NavMesh",
+  "scene.navmesh_show_vertices": "Mostrar vertices del NavMesh",
   "scene.tool_handles": "Manejadores",
   "scene.pivot_center": "Pivote: Centro",
   "scene.orientation_local": "Orientacion: Local",
@@ -160,6 +164,7 @@
   "inspector.rotation": "Rotacion",
   "inspector.scale": "Escala",
   "inspector.add_component": "Agregar componente",
+  "inspector.shader_none": "Ninguno",
   "inspector.reset": "Reiniciar",
   "inspector.remove_component": "Eliminar componente",
   "inspector.copy_component": "Copiar componente",
@@ -243,6 +248,8 @@
 
   "popup.search_components": "Buscar componentes...",
   "popup.no_components": "Sin componentes coincidentes",
+  "popup.search_shaders": "Buscar shaders...",
+  "popup.no_shaders": "Sin shaders coincidentes",
   "popup.uncategorized": "Sin categoria",
   "selector.no_scene": "Ninguna escena cargada",
   "selector.no_objects": "Sin objetos coincidentes en la escena",
@@ -466,6 +473,10 @@
   "pref.animated_bg": "Fondo animado",
   "pref.anti_aliasing": "Suavizado",
   "pref.theme_filter": "Tema Zenith",
+  "pref.performance": "Rendimiento",
+  "pref.vsync": "VSync",
+  "pref.frame_rate_limit": "Limite de FPS",
+  "pref.unfocused_frame_rate": "Limite de FPS sin foco",
 
   "editor.untitled_scene": "Sin titulo",
   "editor.stat_selected": "Elementos seleccionados",
