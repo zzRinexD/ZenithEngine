@@ -1,5 +1,8 @@
 REPORTE DE INICIALIZACION - EDITOR ZENITH (Prowl)
 =====================================================
+
+Nota (2026-09-29): Este documento es una auditoría técnica de la fase de inicialización del editor, fechada el 2026-09-20. Las líneas y referencias a archivos pueden haber cambiado desde entonces; tratar como referencia histórica, no como documentación viva. Documentación viva en docs/WORKFLOW_*.md.
+
 Fecha: 2026-09-20
 No se modifico ningun archivo fuente del proyecto.
 
