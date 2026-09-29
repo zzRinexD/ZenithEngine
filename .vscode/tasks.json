@@ -2,12 +2,25 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build: Prowl.Editor Debug",
+            "label": "build: Zenith.sln Debug",
             "command": "dotnet",
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/Prowl.Editor/Prowl.Editor.csproj",
+                "${workspaceFolder}/Zenith.sln",
+                "-c", "Debug"
+            ],
+            "group": { "kind": "build", "isDefault": true },
+            "presentation": { "reveal": "silent" },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build: Zenith.Editor Debug",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/Zenith.Editor/Zenith.Editor.csproj",
                 "-c", "Debug"
             ],
             "group": "build",
@@ -15,16 +28,55 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "build: Prowl.Editor Release",
+            "label": "build: Zenith.Editor Release",
             "command": "dotnet",
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/Prowl.Editor/Prowl.Editor.csproj",
+                "${workspaceFolder}/Zenith.Editor/Zenith.Editor.csproj",
                 "-c", "Release"
             ],
             "group": "build",
             "presentation": { "reveal": "silent" },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "run: Zenith.Editor",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "run",
+                "--project", "${workspaceFolder}/Zenith.Editor/Zenith.Editor.csproj",
+                "-c", "Debug"
+            ],
+            "group": "build",
+            "presentation": { "reveal": "always" },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "test: Zenith.Runtime",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "test",
+                "${workspaceFolder}/Zenith.Runtime.Test/Zenith.Runtime.Test.csproj",
+                "-c", "Debug"
+            ],
+            "group": { "kind": "test", "isDefault": true },
+            "presentation": { "reveal": "always" },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "test: Zenith.Editor",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "test",
+                "${workspaceFolder}/Zenith.Editor.Test/Zenith.Editor.Test.csproj",
+                "-c", "Debug"
+            ],
+            "group": "test",
+            "presentation": { "reveal": "always" },
             "problemMatcher": "$msCompile"
         },
         {
@@ -47,32 +99,6 @@
             "args": [
                 "build",
                 "${workspaceFolder}/Samples/AudioDemo/AudioDemo.csproj",
-                "-c", "Release"
-            ],
-            "group": "build",
-            "presentation": { "reveal": "silent" },
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "build: BananaMan Debug",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "build",
-                "${workspaceFolder}/Samples/BananaMan/BananaMan.csproj",
-                "-c", "Debug"
-            ],
-            "group": "build",
-            "presentation": { "reveal": "silent" },
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "build: BananaMan Release",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "build",
-                "${workspaceFolder}/Samples/BananaMan/BananaMan.csproj",
                 "-c", "Release"
             ],
             "group": "build",
@@ -177,32 +203,6 @@
             "args": [
                 "build",
                 "${workspaceFolder}/Samples/PhysicsCubes/PhysicsCubes.csproj",
-                "-c", "Release"
-            ],
-            "group": "build",
-            "presentation": { "reveal": "silent" },
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "build: PhysicsTesterDemo Debug",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "build",
-                "${workspaceFolder}/Samples/PhysicsTesterDemo/PhysicsTesterDemo.csproj",
-                "-c", "Debug"
-            ],
-            "group": "build",
-            "presentation": { "reveal": "silent" },
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "build: PhysicsTesterDemo Release",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "build",
-                "${workspaceFolder}/Samples/PhysicsTesterDemo/PhysicsTesterDemo.csproj",
                 "-c", "Release"
             ],
             "group": "build",

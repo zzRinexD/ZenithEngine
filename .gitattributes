@@ -4,3 +4,6 @@
 # Raw binary assets (e.g. precomputed SMAA lookup tables) must never be line-ending normalized
 *.bin binary
 *.brdf binary
+
+# Force .gitignore to be treated as text (git caches binary classification otherwise)
+.gitignore text eol=lf

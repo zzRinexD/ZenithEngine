@@ -5,20 +5,20 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Prowl.Editor (Debug)",
+            "name": "Zenith.Editor (Debug)",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build: Prowl.Editor Debug",
+            "preLaunchTask": "build: Zenith.Editor Debug",
             "program": "${workspaceFolder}/Build/Editor/Debug/net10.0/Prowl.Editor.dll",
             "args": [],
             "cwd": "${workspaceFolder}",
             "stopAtEntry": false
         },
         {
-            "name": "Prowl.Editor (Release)",
+            "name": "Zenith.Editor (Release)",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build: Prowl.Editor Release",
+            "preLaunchTask": "build: Zenith.Editor Release",
             "program": "${workspaceFolder}/Build/Editor/Release/net10.0/Prowl.Editor.dll",
             "args": [],
             "cwd": "${workspaceFolder}",
@@ -42,26 +42,6 @@
             "program": "${workspaceFolder}/Samples/AudioDemo/bin/Release/net10.0/AudioDemo.dll",
             "args": [],
             "cwd": "${workspaceFolder}/Samples/AudioDemo",
-            "stopAtEntry": false
-        },
-        {
-            "name": "BananaMan (Debug)",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build: BananaMan Debug",
-            "program": "${workspaceFolder}/Samples/BananaMan/bin/Debug/net10.0/BananaMan.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/Samples/BananaMan",
-            "stopAtEntry": false
-        },
-        {
-            "name": "BananaMan (Release)",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build: BananaMan Release",
-            "program": "${workspaceFolder}/Samples/BananaMan/bin/Release/net10.0/BananaMan.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/Samples/BananaMan",
             "stopAtEntry": false
         },
         {
@@ -142,26 +122,6 @@
             "program": "${workspaceFolder}/Samples/PhysicsCubes/bin/Release/net10.0/PhysicsCubes.dll",
             "args": [],
             "cwd": "${workspaceFolder}/Samples/PhysicsCubes",
-            "stopAtEntry": false
-        },
-        {
-            "name": "PhysicsTesterDemo (Debug)",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build: PhysicsTesterDemo Debug",
-            "program": "${workspaceFolder}/Samples/PhysicsTesterDemo/bin/Debug/net10.0/PhysicsTesterDemo.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/Samples/PhysicsTesterDemo",
-            "stopAtEntry": false
-        },
-        {
-            "name": "PhysicsTesterDemo (Release)",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build: PhysicsTesterDemo Release",
-            "program": "${workspaceFolder}/Samples/PhysicsTesterDemo/bin/Release/net10.0/PhysicsTesterDemo.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/Samples/PhysicsTesterDemo",
             "stopAtEntry": false
         },
         {
