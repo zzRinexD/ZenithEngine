@@ -188,7 +188,7 @@ dotnet_diagnostic.IDE0044.severity = none
 dotnet_diagnostic.IDE0290.severity = none
 
 # License header
-file_header_template = This file is part of the Prowl Game Engine\nLicensed under the MIT License. See the LICENSE file in the project root for details.
+file_header_template = This file is part of Zenith Engine (a fork of Prowl Engine)\nLicensed under the MIT License. See the LICENSE file in the project root for details.
 
 # C++ Files
 [*.{cpp,h,in}]
