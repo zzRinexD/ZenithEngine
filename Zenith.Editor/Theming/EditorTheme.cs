@@ -339,6 +339,13 @@ public static class EditorTheme
     public static Color Amber600 => T.Amber.C700;
     public static Color Amber700 => T.Amber.C700;
 
+    // -- Extended palette (new category colors) --
+    public static readonly Color Cyan400 = Color.FromArgb(255, 0x4D, 0xD0, 0xE1);
+    public static readonly Color Orange400 = Color.FromArgb(255, 0xFF, 0x9E, 0x64);
+    public static readonly Color Pink400 = Color.FromArgb(255, 0xE8, 0x7A, 0x9C);
+    public static readonly Color Brown400 = Color.FromArgb(255, 0xA0, 0x7A, 0x52);
+    public static readonly Color Olive400 = Color.FromArgb(255, 0xA8, 0xB5, 0x6A);
+
     // -- Ink: borders (100/200 editor-specific) + text hierarchy (300 hint -> 500 primary). --
     public static Color Ink100 => Color.FromArgb(255, 90, 90, 90);        // faintest / disabled
     public static Color Ink200 => Color.FromArgb(255, 138, 138, 138);     // secondary / disabled

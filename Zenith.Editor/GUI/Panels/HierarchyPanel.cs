@@ -14,7 +14,9 @@ using Prowl.PaperUI;
 using Prowl.PaperUI.LayoutEngine;
 using Prowl.Rosetta;
 using Prowl.Runtime;
+using Prowl.Runtime.ParticleSystem;
 using Prowl.Runtime.Resources;
+using Prowl.Runtime.Terrain;
 using Prowl.Vector;
 
 using Color = System.Drawing.Color;
@@ -529,12 +531,13 @@ public class HierarchyPanel : DockPanel
             else dropInd = TreeDropPosition.Into;
         }
 
+        var (nodeIcon, nodeColor) = GetGoStyle(go);
         var node = new TreeNode
         {
             Id = goId,
             Label = go.Name,
-            Icon = GetGameObjectIcon(go),
-            IconColor = go.EnabledInHierarchy ? null : EditorTheme.Ink300,
+            Icon = "", // CustomRowContent draws GetGoStyle(go).icon directly; TreeNode.Icon is string-only
+            IconColor = go.EnabledInHierarchy ? nodeColor : EditorTheme.Ink300,
             LabelColor = GetPrefabTextColor(go),
             HasChildren = hasVisibleChildren,
             Depth = depth,
@@ -1217,28 +1220,42 @@ public class HierarchyPanel : DockPanel
         return go.EnabledInHierarchy ? EditorTheme.Purple400 : EditorTheme.Purple300;
     }
 
-    private static string GetGameObjectIcon(GameObject go)
-    {
-        if (go.GetComponent<Camera>() != null) return EditorIcons.Camera;
-        if (go.GetComponent<Light>() != null) return EditorIcons.Sun;
-        if (go.GetComponent<MeshRenderer>() != null) return EditorIcons.Cube;
-        if (go.GetComponent<SkinnedMeshRenderer>() != null) return EditorIcons.Cubes;
-        return EditorIcons.Circle;
-    }
-
     // Vector icon + accent colour chosen from the GameObject's defining (first) component.
     private static (IOrigamiIcon icon, Color color) GetGoStyle(GameObject go)
     {
         var first = go.GetComponents<MonoBehaviour>().FirstOrDefault();
-        if (first is Camera)               return (EditorIcons.Camera_I, EditorTheme.Blue400);    // blue
-        if (first is Light)                return (EditorIcons.Lightbulb_I, EditorTheme.Amber400);    // amber
-        if (first is SkinnedMeshRenderer)  return (EditorIcons.Cubes_I, EditorTheme.Purple400);    // purple
-        if (first is MeshRenderer)         return (EditorIcons.Cube_I, EditorTheme.Purple400);    // purple
-        if (first != null)                 return (EditorIcons.FileCode_I, EditorTheme.Green400);   // any other component = green script
-        // Empty GameObject: a group icon when it parents others, else a dim generic mark.
-        return go.Children.Count > 0
-            ? (EditorIcons.ObjectGroup_I, EditorTheme.Ink300)
-            : (EditorIcons.Cube_I, EditorTheme.InkDim);
+
+        // 1. Casos específicos (en orden de prioridad)
+        if (first is Camera)                     return (EditorIcons.Camera_I, EditorTheme.Blue400);
+        if (first is DirectionalLight)           return (EditorIcons.Sun_I, EditorTheme.Amber400);
+        if (first is PointLight)                 return (EditorIcons.Lightbulb_I, EditorTheme.Amber400);
+        if (first is SpotLight)                  return (EditorIcons.Bullseye_I, EditorTheme.Amber400);
+        if (first is Light)                      return (EditorIcons.Lightbulb_I, EditorTheme.Amber400);
+        if (first is MeshRenderer)               return (EditorIcons.Cube_I, EditorTheme.Purple400);
+        if (first is SkinnedMeshRenderer)        return (EditorIcons.Cubes_I, EditorTheme.Purple400);
+        if (first is TextMeshComponent)          return (EditorIcons.Font_I, EditorTheme.Purple400);
+        if (first is AudioSource)                return (EditorIcons.VolumeHigh_I, EditorTheme.Orange400);
+        if (first is AudioListener)              return (EditorIcons.Headphones_I, EditorTheme.Orange400);
+        if (first is Prowl.Runtime.ParticleSystem.ParticleSystemComponent) return (EditorIcons.SprayCanSparkles_I, EditorTheme.Cyan400);
+        if (first is FogVolume)                  return (EditorIcons.Cloud_I, EditorTheme.Cyan400);
+        if (first is TerrainComponent)           return (EditorIcons.Mountain_I, EditorTheme.Brown400);
+        if (first is TerrainCollider)            return (EditorIcons.Mountain_I, EditorTheme.Brown400);
+        if (first is GameCanvas)                 return (EditorIcons.BorderAll_I, EditorTheme.Pink400);
+        if (first is Prowl.Runtime.UI.UIButton)      return (EditorIcons.MobileButton_I, EditorTheme.Pink400);
+        if (first is Prowl.Runtime.UI.UIImage)       return (EditorIcons.Image_I, EditorTheme.Pink400);
+        if (first is Prowl.Runtime.UI.UISlider)      return (EditorIcons.Sliders_I, EditorTheme.Pink400);
+        if (first is TextComponent)              return (EditorIcons.Font_I, EditorTheme.Pink400);
+        if (first is Collider)                   return (EditorIcons.Shield_I, EditorTheme.Olive400);
+        if (first is Rigidbody3D)                return (EditorIcons.WeightHanging_I, EditorTheme.Olive400);
+
+        // 2. Fallback: cualquier otro MonoBehaviour
+        if (first != null)                       return (EditorIcons.FileCode_I, EditorTheme.Green400);
+
+        // 3. Vacío con hijos → grupo
+        if (go.Children.Count > 0)               return (EditorIcons.ObjectGroup_I, EditorTheme.Ink300);
+
+        // 4. Vacío sin hijos
+        return (EditorIcons.Cube_I, EditorTheme.InkDim);
     }
 
     private GameObject? FindGOByIdentifier(string id)
