@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 using Prowl.Echo;
 
@@ -96,41 +97,53 @@ public sealed class ShaderPass
 
     public bool TryGetVariantProgram(Dictionary<string, bool>? keywordID, out GraphicsProgram variant)
     {
-        string keywords = string.Empty;
-        if (keywordID != null)
+        // 1. Extraer keywords activas en orden alfabético determinista.
+        string[] activeKeywords;
+        if (keywordID != null && keywordID.Count > 0)
         {
-            foreach (KeyValuePair<string, bool> kvp in keywordID)
-            {
-                if (kvp.Value)
-                    keywords += $"{kvp.Key};";
-            }
+            activeKeywords = new string[keywordID.Count];
+            int n = 0;
+            foreach (var kvp in keywordID)
+                if (kvp.Value) activeKeywords[n++] = kvp.Key;
+            Array.Resize(ref activeKeywords, n);
+            Array.Sort(activeKeywords, StringComparer.Ordinal);
+        }
+        else
+        {
+            activeKeywords = Array.Empty<string>();
         }
 
+        // 2. Clave de caché canónica.
+        string keywords = activeKeywords.Length == 0
+            ? string.Empty
+            : string.Join(";", activeKeywords) + ";";
+
+        // 3. Hit de caché.
         if (_variants.TryGetValue(keywords, out variant))
             return true;
 
+        // 4. Validaciones de source.
         string frag = _fragmentSource;
         string vert = _vertexSource;
         if (string.IsNullOrEmpty(frag)) throw new Exception($"Failed to compile shader pass of {Name}. Fragment Shader is null or empty.");
         if (string.IsNullOrEmpty(vert)) throw new Exception($"Failed to compile shader pass of {Name}. Vertex Shader is null or empty.");
 
-        frag = frag.Insert(0, $"#define FRAGMENT_VERSION 1\n");
-        vert = vert.Insert(0, $"#define FRAGMENT_VERSION 1\n");
-
-        if (keywordID != null)
+        // 5. Construir shader source con StringBuilder (determinista y O(n)).
+        var fragBuilder = new StringBuilder(frag.Length + 128);
+        var vertBuilder = new StringBuilder(vert.Length + 128);
+        fragBuilder.Append("#version 410\n");
+        vertBuilder.Append("#version 410\n");
+        foreach (string kw in activeKeywords)
         {
-            foreach (KeyValuePair<string, bool> kvp in keywordID)
-            {
-                if (!kvp.Value) continue;
-
-                frag = frag.Insert(0, $"#define {kvp.Key}\n");
-                vert = vert.Insert(0, $"#define {kvp.Key}\n");
-            }
+            fragBuilder.Append("#define ").Append(kw).Append('\n');
+            vertBuilder.Append("#define ").Append(kw).Append('\n');
         }
-
-        frag = frag.Insert(0, $"#version 410\n");
-        vert = vert.Insert(0, $"#version 410\n");
-
+        fragBuilder.Append("#define FRAGMENT_VERSION 1\n");
+        vertBuilder.Append("#define FRAGMENT_VERSION 1\n");
+        fragBuilder.Append(frag);
+        vertBuilder.Append(vert);
+        frag = fragBuilder.ToString();
+        vert = vertBuilder.ToString();
 
         Debug.Log("Compiling shader pass " + Name + " with keywords: " + keywords);
 
