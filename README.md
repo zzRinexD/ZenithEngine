@@ -7,9 +7,9 @@
 <p align="center">
   <a href="https://github.com/zzRinexD/ZenithEngine/actions/workflows/ci.yml"><img src="https://github.com/zzRinexD/ZenithEngine/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/github/languages/top/zzRinexD/ZenithEngine" alt="Top language">
-  <a href="https://dotnet.microsoft.com/en-us/download/dotnet/10.0"><img src="https://img.shields.io/badge/.NET-10.0-512BD4" alt=".NET 10"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/zzRinexD/ZenithEngine" alt="License"></a>
-  <a href="https://github.com/zzRinexD/ZenithEngine/releases"><img src="https://img.shields.io/github/v/release/zzRinexD/ZenithEngine?include_prereleases" alt="Release"></a>
+  <a href="https://dotnet.microsoft.com/en-us/download/dotnet/10.0"><img src="https://img.shields.io/badge/.NET-10.0-purple.svg" alt=".NET 10"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://github.com/zzRinexD/ZenithEngine/releases"><img src="https://img.shields.io/github/v/release/zzRinexD/ZenithEngine?include_prereleases&sort=semver" alt="Release"></a>
   <a href="https://github.com/zzRinexD/ZenithEngine/issues"><img src="https://img.shields.io/github/issues/zzRinexD/ZenithEngine" alt="Issues"></a>
 </p>
 
