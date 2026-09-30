@@ -56,6 +56,7 @@ public static class GlobalUniforms
     private static GraphicsBuffer? s_uniformBuffer;
     private static GlobalUniformsData s_data;
     private static bool s_isDirty = true;
+    private static readonly GlobalUniformsData[] s_uploadBuffer = new GlobalUniformsData[1];
 
     /// <summary>
     /// Initializes the global uniform buffer
@@ -86,7 +87,8 @@ public static class GlobalUniforms
         if (s_isDirty && s_uniformBuffer != null)
         {
             using var cmd = Graphics.GetCommandBuffer("GlobalUniforms.Upload");
-            cmd.UpdateBuffer<GlobalUniformsData>(s_uniformBuffer, new[] { s_data });
+            s_uploadBuffer[0] = s_data;
+            cmd.UpdateBuffer<GlobalUniformsData>(s_uniformBuffer, s_uploadBuffer);
             Graphics.Submit(cmd);
             s_isDirty = false;
         }

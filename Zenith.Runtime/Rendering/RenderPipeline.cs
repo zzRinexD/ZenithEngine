@@ -142,6 +142,8 @@ public abstract class RenderPipeline : EngineObject
     private static Shader? s_blitShader;
     private static Material? s_blitMaterial;
 
+    private static readonly TextureImageFormat[] s_grabTextureFormat = [TextureImageFormat.Color4b];
+
     /// <summary>Default material used by <c>cmd.Blit</c> when no material is supplied.
     /// Lazy-loaded on first call.</summary>
     public static Material GetBlitMaterial()
@@ -664,7 +666,7 @@ public abstract class RenderPipeline : EngineObject
                 int fbWidth = currentRT.Width;
                 int fbHeight = currentRT.Height;
                 bool wantDepth = pass.HasGrabDepth;
-                grabRT = RenderTexture.GetTemporaryRT(fbWidth, fbHeight, wantDepth, [TextureImageFormat.Color4b]);
+                grabRT = RenderTexture.GetTemporaryRT(fbWidth, fbHeight, wantDepth, s_grabTextureFormat);
 
                 cmd.SetRenderTargets(grabRT.frameBuffer, currentRT.frameBuffer);
                 cmd.BlitFramebuffer(0, 0, fbWidth, fbHeight, 0, 0, fbWidth, fbHeight, ClearFlags.Color, BlitFilter.Nearest);
