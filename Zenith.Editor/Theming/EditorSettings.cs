@@ -19,6 +19,10 @@ public class EditorSettings
 
     private static readonly string _filePath = Core.EditorPaths.EditorSettingsFile;
 
+    private static readonly TimeSpan SaveDebounce = TimeSpan.FromMilliseconds(300);
+    private DateTime _lastSaveRequest = DateTime.MinValue;
+    private bool _savePending = false;
+
     // Preferences
     /// <summary> Gets or sets the default directory for new projects. Defaults to Documents/Zenith Projects. </summary>
     public string DefaultProjectsPath { get; set; } = Core.EditorPaths.DefaultProjectsFolder;
@@ -118,20 +122,42 @@ public class EditorSettings
         EditorTheme.SyncOrigami();
     }
 
-    /// <summary> Serializes this instance to the editor settings JSON file on disk. Silently logs a warning on failure. </summary>
+    /// <summary> Marks settings as dirty. The actual write is deferred by ~300ms to coalesce rapid changes (window drag, slider ticks). Call SaveNow() to force an immediate write. </summary>
     public void Save()
+    {
+        _lastSaveRequest = DateTime.UtcNow;
+        _savePending = true;
+    }
+
+    /// <summary> Writes settings to disk immediately and atomically (temp file + rename). </summary>
+    public void SaveNow()
     {
         try
         {
             string dir = Path.GetDirectoryName(_filePath)!;
             Directory.CreateDirectory(dir);
             var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_filePath, json);
+
+            // Write to a temp file and rename into place so a crash/power-loss mid-write can't
+            // leave a truncated settings file. Same pattern as MetaFile.cs:71-73.
+            string tempPath = _filePath + ".tmp";
+            File.WriteAllText(tempPath, json);
+            File.Move(tempPath, _filePath, overwrite: true);
+
+            _savePending = false;
         }
         catch (Exception ex)
         {
             Debug.LogWarning($"Failed to save editor settings: {ex.Message}");
         }
+    }
+
+    /// <summary> Flushes a pending save if the debounce window has elapsed. Call once per editor frame. </summary>
+    public void Tick()
+    {
+        if (!_savePending) return;
+        if (DateTime.UtcNow - _lastSaveRequest < SaveDebounce) return;
+        SaveNow();
     }
 
     private static EditorSettings Load()
@@ -173,6 +199,6 @@ public class EditorSettings
     {
         Theme = EditorThemeData.CreateDefault();
         ApplyTheme();
-        Save();
+        SaveNow();
     }
 }

@@ -276,6 +276,7 @@ public class EditorApplication : Game
         Window.InternalWindow.Closing += () =>
         {
             SaveEditorWindowState();
+            EditorSettings.Instance.SaveNow(); // Force flush: no debounce on shutdown.
         };
 
         Window.FileDrop += ExternalAssetDrop.Enqueue;
@@ -1715,6 +1716,8 @@ public class EditorApplication : Game
     /// </summary>
     public override void OnUpdate(Runtime.Resources.Scene? scene)
     {
+        EditorSettings.Instance.Tick();
+
         // Always update lifecycle gating is per-component via ShouldExecuteGameplay.
         // Components only run Start/Update/LateUpdate if IsPlaying or [ExecuteAlways].
         if (Application.ShouldRunGameplay)
