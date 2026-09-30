@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 using Prowl.Echo;
-using Prowl.Echo.Cloning;
 using Prowl.Runtime.Rendering;
 using Prowl.Runtime.Resources;
 using Prowl.Vector;

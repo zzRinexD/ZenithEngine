@@ -4,8 +4,6 @@
 using Prowl.Runtime.Rendering;
 using Prowl.Runtime.Resources;
 using Prowl.Vector;
-using Prowl.Vector.Geometry;
-
 namespace Prowl.Runtime.UI;
 
 /// <summary>

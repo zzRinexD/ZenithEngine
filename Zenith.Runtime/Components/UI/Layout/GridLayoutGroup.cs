@@ -6,8 +6,6 @@ using System.Collections.Generic;
 
 using Prowl.Echo;
 using Prowl.Vector;
-using Prowl.Vector.Geometry;
-
 namespace Prowl.Runtime.UI;
 
 /// <summary>Arranges children on a fixed-cell-size grid, filling rows left-to-right, top-to-bottom.</summary>

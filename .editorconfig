@@ -56,7 +56,7 @@ dotnet_style_predefined_type_for_locals_parameters_members = true:suggestion
 dotnet_style_predefined_type_for_member_access = true:suggestion
 
 # name all constant fields using PascalCase
-dotnet_naming_rule.constant_fields_should_be_pascal_case.severity = suggestion
+dotnet_naming_rule.constant_fields_should_be_pascal_case.severity = warning
 dotnet_naming_rule.constant_fields_should_be_pascal_case.symbols  = constant_fields
 dotnet_naming_rule.constant_fields_should_be_pascal_case.style    = pascal_case_style
 dotnet_naming_symbols.constant_fields.applicable_kinds   = field
@@ -64,21 +64,21 @@ dotnet_naming_symbols.constant_fields.required_modifiers = const
 dotnet_naming_style.pascal_case_style.capitalization = pascal_case
 
 # public fields should be PascalCase
-dotnet_naming_rule.public_fields_should_be_pascal_case.severity = suggestion
+dotnet_naming_rule.public_fields_should_be_pascal_case.severity = warning
 dotnet_naming_rule.public_fields_should_be_pascal_case.symbols  = public_fields
 dotnet_naming_rule.public_fields_should_be_pascal_case.style    = pascal_case_style
 dotnet_naming_symbols.public_fields.applicable_kinds = field
 dotnet_naming_symbols.public_fields.applicable_accessibilities = public
 
 # public properties should be PascalCase
-dotnet_naming_rule.public_properties_should_be_pascal_case.severity = suggestion
+dotnet_naming_rule.public_properties_should_be_pascal_case.severity = warning
 dotnet_naming_rule.public_properties_should_be_pascal_case.symbols  = public_properties
 dotnet_naming_rule.public_properties_should_be_pascal_case.style    = pascal_case_style
 dotnet_naming_symbols.public_properties.applicable_kinds = property
 dotnet_naming_symbols.public_properties.applicable_accessibilities = public
 
 # static fields should have s_ prefix
-dotnet_naming_rule.static_fields_should_have_prefix.severity = suggestion
+dotnet_naming_rule.static_fields_should_have_prefix.severity = warning
 dotnet_naming_rule.static_fields_should_have_prefix.symbols  = static_fields
 dotnet_naming_rule.static_fields_should_have_prefix.style    = static_prefix_style
 dotnet_naming_symbols.static_fields.applicable_kinds   = field
@@ -88,7 +88,7 @@ dotnet_naming_style.static_prefix_style.required_prefix = s_
 dotnet_naming_style.static_prefix_style.capitalization = camel_case
 
 # internal and private fields should be _camelCase
-dotnet_naming_rule.camel_case_for_private_internal_fields.severity = suggestion
+dotnet_naming_rule.camel_case_for_private_internal_fields.severity = warning
 dotnet_naming_rule.camel_case_for_private_internal_fields.symbols  = private_internal_fields
 dotnet_naming_rule.camel_case_for_private_internal_fields.style    = camel_case_underscore_style
 dotnet_naming_symbols.private_internal_fields.applicable_kinds = field
@@ -229,3 +229,20 @@ end_of_line = crlf
 # so EMBA002 has nothing actionable to say about them.
 [Zenith.Runtime/Audio/Native/*.cs]
 dotnet_diagnostic.EMBA002.severity = none
+
+##########################################
+# Zenith-specific severity overrides
+# Started as `warning` (not `error`) to surface issues without breaking builds.
+# Once the codebase is clean, consider promoting to `error` alongside TreatWarningsAsErrors.
+##########################################
+
+[*.cs]
+# Unnecessary using directives
+dotnet_diagnostic.IDE0005.severity = warning
+
+# File-scoped namespaces (all new code should use them)
+dotnet_diagnostic.IDE0160.severity = warning
+
+# IDE0055 (formatting): kept as `suggestion` until the repo has been bulk-formatted with `dotnet format`.
+# Plan: run `dotnet format` in a dedicated commit, then promote this to `warning` and enforce in CI.
+dotnet_diagnostic.IDE0055.severity = suggestion

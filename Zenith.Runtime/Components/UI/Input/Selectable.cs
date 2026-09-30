@@ -4,7 +4,6 @@
 using Prowl.Echo;
 using Prowl.Runtime.Resources;
 using Prowl.Vector;
-using Prowl.Vector.Geometry;
 
 namespace Prowl.Runtime.UI;
 

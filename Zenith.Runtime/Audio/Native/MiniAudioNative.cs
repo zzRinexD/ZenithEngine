@@ -5,21 +5,21 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Prowl.Runtime.Audio.Native;
-
 // ma_typedefs
-using ma_channel = Byte;
-using ma_bool8 = Byte;
-using ma_bool32 = UInt32;
-using ma_uint8 = Byte;
-using ma_uint16 = UInt16;
-using ma_int32 = UInt32;
-using ma_uint32 = UInt32;
-using ma_int64 = Int64;
-using ma_uint64 = UInt64;
-using ma_handle = IntPtr;
-using ma_vfs_file = IntPtr;
-using ma_spinlock = UInt32;
+using ma_channel = System.Byte;
+using ma_bool8 = System.Byte;
+using ma_bool32 = System.UInt32;
+using ma_uint8 = System.Byte;
+using ma_uint16 = System.UInt16;
+using ma_int32 = System.UInt32;
+using ma_uint32 = System.UInt32;
+using ma_int64 = System.Int64;
+using ma_uint64 = System.UInt64;
+using ma_handle = System.IntPtr;
+using ma_vfs_file = System.IntPtr;
+using ma_spinlock = System.UInt32;
+
+namespace Prowl.Runtime.Audio.Native;
 
 // ma_callbacks
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]

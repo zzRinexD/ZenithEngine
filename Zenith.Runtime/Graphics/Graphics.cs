@@ -4,7 +4,6 @@
 using System;
 
 using Prowl.Runtime.Resources;
-using Prowl.Vector;
 
 using Silk.NET.Core.Native;
 using Silk.NET.OpenGL;

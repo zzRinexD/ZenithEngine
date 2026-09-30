@@ -5,8 +5,6 @@ using System.Collections.Generic;
 
 using Prowl.Echo;
 using Prowl.Vector;
-using Prowl.Vector.Geometry;
-
 namespace Prowl.Runtime.UI;
 
 /// <summary>

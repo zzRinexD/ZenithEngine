@@ -2,4 +2,8 @@
 
   <!-- ProwlPackageVersion moved to Directory.Packages.props (Central Package Management). -->
 
+  <PropertyGroup>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
 </Project>

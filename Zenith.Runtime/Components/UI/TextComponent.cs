@@ -9,7 +9,6 @@ using Prowl.Runtime.Resources;
 using Prowl.Runtime.UI;
 using Prowl.Scribe;
 using Prowl.Vector;
-using Prowl.Vector.Geometry;
 
 using ScribeAlign = Prowl.Scribe.TextAlignment;
 using TAlignment = Prowl.Runtime.UI.TextAlignment;
