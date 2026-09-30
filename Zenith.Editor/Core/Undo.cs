@@ -936,17 +936,14 @@ public static class Undo
     /// <summary>
     /// Find a GameObject by identifier in the current scene. Returns null if not found.
     /// Use this in undo/redo lambdas instead of capturing GO references directly.
+    /// Delegates to <see cref="Scene.FindByIdentifier"/> (dictionary lookup instead of
+    /// a per-root tree walk, so undo/redo batches stay linear on large scenes).
     /// </summary>
     public static GameObject? FindGO(Guid identifier)
     {
         var scene = Scene.Current;
         if (scene == null) return null;
-        foreach (var root in scene.RootObjects)
-        {
-            var found = root.FindChildByIdentifier(identifier);
-            if (found != null) return found;
-        }
-        return null;
+        return scene.FindByIdentifier(identifier);
     }
 
     /// <summary>

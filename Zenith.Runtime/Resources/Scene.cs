@@ -218,6 +218,10 @@ public class Scene : EngineObject, ISerializationCallbackReceiver
     [SerializeIgnore]
     private HashSet<GameObject> _allObjSet = new(ReferenceEqualityComparer.Instance);
 
+    private int _version;
+    private Dictionary<Guid, GameObject>? _identifierCache;
+    private int _identifierCacheVersion = -1;
+
     private PhysicsWorld _physics = new();
 
     public PhysicsWorld Physics { get { EnsureNotDisposed(); return _physics; } }
@@ -451,6 +455,13 @@ public class Scene : EngineObject, ISerializationCallbackReceiver
     /// <summary> Enumerates all <see cref="RootObjects"/> that are currently active. </summary>
     public IEnumerable<GameObject> ActiveRootObjects { get { EnsureNotDisposed(); return _allObj.Where(o => !o.IsDisposed && o.Transform.Parent == null && o.EnabledInHierarchy); } }
 
+    /// <summary>
+    /// Monotonic counter bumped on every structural mutation of the object list
+    /// (add/remove/insert). Used to invalidate internal caches such as
+    /// <see cref="FindByIdentifier"/>.
+    /// </summary>
+    public int Version => _version;
+
     /// <summary> Returns whether this Scene is completely empty. </summary>
     public bool IsEmpty { get { EnsureNotDisposed(); return !AllObjects.Any(); } }
 
@@ -558,6 +569,7 @@ public class Scene : EngineObject, ISerializationCallbackReceiver
         index = Math.Max(0, Math.Min(index, rootIndices.Count));
         int insertAt = index < rootIndices.Count ? rootIndices[index] : _allObj.Count;
         _allObj.Insert(insertAt, obj);
+        _version++;
     }
 
     /// <summary>
@@ -576,6 +588,31 @@ public class Scene : EngineObject, ISerializationCallbackReceiver
             rootIdx++;
         }
         return -1;
+    }
+
+    /// <summary>
+    /// Finds a <see cref="GameObject"/> by its <see cref="GameObject.Identifier"/>.
+    /// Uses an internal dictionary rebuilt lazily when the scene's <see cref="Version"/> changes.
+    /// Returns null if not found or if the object has been disposed.
+    /// </summary>
+    public GameObject? FindByIdentifier(Guid identifier)
+    {
+        EnsureNotDisposed();
+
+        // Rebuild the cache when the scene version changes (or on first call).
+        if (_identifierCache == null || _identifierCacheVersion != _version)
+        {
+            _identifierCache = new Dictionary<Guid, GameObject>();
+            foreach (GameObject go in _allObj)
+            {
+                if (go.IsDisposed) continue;
+                _identifierCache[go.Identifier] = go;
+            }
+            _identifierCacheVersion = _version;
+        }
+
+        _identifierCache.TryGetValue(identifier, out GameObject? result);
+        return result;
     }
 
     /// <summary>
@@ -630,6 +667,7 @@ public class Scene : EngineObject, ISerializationCallbackReceiver
         if (!_allObjSet.Remove(obj)) return;
 
         _allObj.Remove(obj);
+        _version++;
 
         foreach (MonoBehaviour component in obj._components)
             if (!component.IsDisposed)
@@ -644,6 +682,7 @@ public class Scene : EngineObject, ISerializationCallbackReceiver
         if (_allObjSet.Add(obj))
         {
             _allObj.Add(obj);
+            _version++;
             obj.Scene = this;
 
             if (IsActive && obj.EnabledInHierarchy)
@@ -661,6 +700,7 @@ public class Scene : EngineObject, ISerializationCallbackReceiver
         if (_allObjSet.Add(obj))
         {
             _allObj.Add(obj);
+            _version++;
             obj.Scene = this;
 
             var components = obj.GetComponents<MonoBehaviour>();
@@ -701,6 +741,7 @@ public class Scene : EngineObject, ISerializationCallbackReceiver
         if (_allObjSet.Remove(obj))
         {
             _allObj.Remove(obj);
+            _version++;
             var components = obj.GetComponents<MonoBehaviour>();
 
             // Call OnDisable for currently enabled components (only if scene is active)
@@ -793,7 +834,7 @@ public class Scene : EngineObject, ISerializationCallbackReceiver
                 removed.Add(obj);
         }
 
-        _allObj.RemoveAll(obj => obj.IsDisposed);
+        if (_allObj.RemoveAll(obj => obj.IsDisposed) > 0) _version++;
         _allObjSet.RemoveWhere(obj => obj.IsDisposed);
 
         foreach (GameObject obj in removed)
@@ -827,6 +868,7 @@ public class Scene : EngineObject, ISerializationCallbackReceiver
 
         // Clear any remaining references
         _allObj.Clear();
+        _version++;
         _allObjSet.Clear();
 
         // Remove all identifiers and reference to any possible gameobject that could hold a
