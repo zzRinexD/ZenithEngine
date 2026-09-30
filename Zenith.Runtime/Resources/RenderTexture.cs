@@ -224,6 +224,53 @@ public sealed class RenderTexture : EngineObject, ISerializable
         return renderTexture;
     }
 
+    /// <summary>
+    /// Returns a temporary <see cref="RenderTexture"/> (previously acquired with
+    /// <see cref="GetTemporaryRT"/>) to the reuse pool. The texture becomes a candidate
+    /// for the next <see cref="GetTemporaryRT"/> call with the same description
+    /// (width, height, depth attachment, formats).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Invariant — submit order matters.</b> Reuse is only safe because the render
+    /// thread processes the command queue strictly in submit order. A caller MUST submit
+    /// the commands that reference this render texture (draws, blits, mipmap generation)
+    /// BEFORE calling this method. When those commands execute, every use of the texture
+    /// is already ahead of anything a later consumer submits for it, so the next
+    /// <see cref="GetTemporaryRT"/> that reuses it cannot race with a still-pending draw.
+    /// This is the same ordering invariant documented on the end-of-frame pool tick in
+    /// <c>Game.cs</c> and around the grab-pass encode in <c>RenderPipeline.cs</c>.
+    /// </para>
+    /// <para>
+    /// Violating this invariant — releasing before the draws that use the texture are
+    /// submitted — can hand the same GPU resource to two concurrent consumers, producing
+    /// visual corruption that is extremely difficult to reproduce (it depends on frame
+    /// scheduling and pool occupancy).
+    /// </para>
+    /// <para>
+    /// <b>Why same-frame reuse is safe.</b> This method performs no GPU work: it only
+    /// moves bookkeeping between the <c>active</c> and <c>pool</c> lists on the main
+    /// thread. A get/release/get cycle within one frame still preserves submit order —
+    /// every command the previous consumer submitted for the texture is queued ahead of
+    /// every command the new consumer submits, and the render thread drains that queue
+    /// in order, so the two uses can never execute concurrently.
+    /// </para>
+    /// <para>
+    /// <b>Safety net if the invariant is broken or release is skipped.</b>
+    /// <see cref="UpdatePool"/> runs at end-of-frame (called from <c>Game.cs</c>). If a
+    /// texture acquired with <see cref="GetTemporaryRT"/> is never released, it stays in
+    /// the <c>active</c> list; once it has been held for more than
+    /// <c>MaxActiveFrames</c> (3) frames, <see cref="UpdatePool"/> logs a leak warning
+    /// and auto-disposes it to prevent unbounded VRAM growth. That auto-dispose is a
+    /// leak guard, NOT a licence to skip the release: skipping it forces the pool to
+    /// grow, defeats reuse, and spams the console with leak warnings.
+    /// </para>
+    /// <para>
+    /// The method itself does no GPU work. Actual GPU disposal of a released texture
+    /// happens later in <see cref="UpdatePool"/>, when a pooled texture has been unused
+    /// for more than <c>MaxUnusedFrames</c> (10) frames.
+    /// </para>
+    /// </remarks>
     public static void ReleaseTemporaryRT(RenderTexture renderTexture)
     {
         // Keyed off the description, not the live attachments - reading those would allocate the very
