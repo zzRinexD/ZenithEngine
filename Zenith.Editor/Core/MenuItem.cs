@@ -74,7 +74,7 @@ public sealed class MenuItemAttribute : Attribute
             {
                 if (method.ReturnType != typeof(bool) || method.GetParameters().Length != 0) continue;
                 try { _validators[attr.Path] = (Func<bool>)Delegate.CreateDelegate(typeof(Func<bool>), method); }
-                catch { }
+                catch (Exception ex) { Debug.LogWarning($"[Menu] Failed to create validator for '{attr.Path}': {ex.Message}"); }
             }
             else
             {
@@ -85,7 +85,10 @@ public sealed class MenuItemAttribute : Attribute
                     _entries.Add(new Entry(attr.Path, del, attr.Priority, attr.Icon, method.DeclaringType!, attr.Separator));
                     _dirty = true;
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[Menu] Failed to register '{attr.Path}': {ex.Message}");
+                }
             }
         }
     }

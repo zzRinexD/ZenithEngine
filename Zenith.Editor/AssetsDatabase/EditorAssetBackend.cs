@@ -455,7 +455,7 @@ public class EditorAssetBackend : AssetBackendBase
             // Clean main cache file
             string cachePath = GetCachePath(guid);
             if (File.Exists(cachePath))
-                try { File.Delete(cachePath); } catch { }
+                try { File.Delete(cachePath); } catch (Exception ex) { Runtime.Debug.LogWarning($"[AssetDatabase] Failed to delete stale cache {guid}: {ex.Message}"); }
         }
 
         if (toRemove.Count > 0)
@@ -527,7 +527,7 @@ public class EditorAssetBackend : AssetBackendBase
                 // Delete old cache file
                 string oldCachePath = GetCachePath(existingGuid);
                 if (File.Exists(oldCachePath))
-                    try { File.Delete(oldCachePath); } catch { }
+                    try { File.Delete(oldCachePath); } catch (Exception ex) { Runtime.Debug.LogWarning($"[AssetDatabase] Failed to delete old cache: {ex.Message}"); }
 
                 entry.Guid = meta.Guid;
                 entry.SubAssets = Array.Empty<SubAssetEntry>();
@@ -769,7 +769,10 @@ public class EditorAssetBackend : AssetBackendBase
                     var meta = MetaFile.Read(metaPath);
                     settings = meta.Settings;
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    Runtime.Debug.LogWarning($"[AssetDatabase] Failed to read meta file: {ex.Message}");
+                }
             }
 
             var defaults = importer.DefaultSettings();
@@ -1332,7 +1335,10 @@ public class EditorAssetBackend : AssetBackendBase
                 contents.Files.Add(new FileRecord(childRel, name, size, mod));
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Runtime.Debug.LogWarning($"[AssetDatabase] Failed to index folder '{relativePath}': {ex.Message}");
+        }
 
         _folderIndex[relativePath] = contents;
     }
@@ -1561,7 +1567,7 @@ public class EditorAssetBackend : AssetBackendBase
             // Clean main cache file
             string cachePath = GetCachePath(guid);
             if (File.Exists(cachePath))
-                try { File.Delete(cachePath); } catch { }
+                try { File.Delete(cachePath); } catch (Exception ex) { Runtime.Debug.LogWarning($"[AssetDatabase] Failed to delete cache for {guid}: {ex.Message}"); }
         }
 
         // Delete files. The index/dispose state above has already been cleared, so an
@@ -1978,7 +1984,7 @@ public class EditorAssetBackend : AssetBackendBase
                         // Clean main cache file
                         string cachePath = GetCachePath(guid);
                         if (File.Exists(cachePath))
-                            try { File.Delete(cachePath); } catch { }
+                            try { File.Delete(cachePath); } catch (Exception ex) { Runtime.Debug.LogWarning($"[AssetDatabase] Failed to delete cache {guid}: {ex.Message}"); }
 
                         deleted.Add(relativePath);
 
@@ -2020,7 +2026,7 @@ public class EditorAssetBackend : AssetBackendBase
                             string oldMeta = MetaFile.GetMetaPath(evt.OldPath);
                             string newMeta = MetaFile.GetMetaPath(evt.Path);
                             if (File.Exists(oldMeta) && !File.Exists(newMeta))
-                                try { File.Move(oldMeta, newMeta); } catch { }
+                                try { File.Move(oldMeta, newMeta); } catch (Exception ex) { Runtime.Debug.LogError($"[AssetDatabase] Failed to move .meta '{oldMeta}' -> '{newMeta}': {ex.Message}. GUID may be regenerated"); }
 
                             if (TryGetLoaded(guid, out var obj))
                                 obj.AssetPath = relativePath;
@@ -2152,7 +2158,7 @@ public class EditorAssetBackend : AssetBackendBase
         }
         string subCachePath = GetCachePath(subGuid);
         if (File.Exists(subCachePath))
-            try { File.Delete(subCachePath); } catch { }
+            try { File.Delete(subCachePath); } catch (Exception ex) { Runtime.Debug.LogWarning($"[AssetDatabase] Failed to delete sub-asset cache {subGuid}: {ex.Message}"); }
     }
 
     private void RemoveSubAssets(AssetEntry entry, bool includeThumbnails)

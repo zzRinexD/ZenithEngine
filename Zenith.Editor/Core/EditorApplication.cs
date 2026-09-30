@@ -1549,7 +1549,7 @@ public class EditorApplication : Game
         Undo.Clear();
 
         // Apply physics settings to the new scene
-        try { EditorRegistries.GetSettings<PhysicsSettings>().Apply(); } catch { }
+        try { EditorRegistries.GetSettings<PhysicsSettings>().Apply(); } catch (Exception ex) { Runtime.Debug.LogWarning($"[Editor] Failed to apply physics settings on play: {ex.Message}"); }
 
         // Focus the Game View tab
         FocusPanel(typeof(GameViewPanel));

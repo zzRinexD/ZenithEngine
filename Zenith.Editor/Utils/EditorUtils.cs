@@ -128,6 +128,9 @@ public static class EditorUtils
                     Process.Start("xdg-open", $"\"{Path.GetDirectoryName(absPath)}\"");
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Runtime.Debug.LogWarning($"[EditorUtils] Failed to open '{absPath}': {ex.Message}");
+        }
     }
 }

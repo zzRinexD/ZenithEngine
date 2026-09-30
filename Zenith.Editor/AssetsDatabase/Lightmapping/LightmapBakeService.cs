@@ -219,7 +219,7 @@ public sealed class LightmapBakeService
             string sceneDir = Path.GetDirectoryName(scenePath)?.Replace('\\', '/') ?? "";
             string sceneName = Path.GetFileNameWithoutExtension(scenePath);
             string lmFolderAbs = Path.Combine(assetsRoot, (string.IsNullOrEmpty(sceneDir) ? "" : sceneDir + "/") + sceneName + "_lightmaps");
-            try { if (Directory.Exists(lmFolderAbs)) Directory.Delete(lmFolderAbs, true); } catch { }
+            try { if (Directory.Exists(lmFolderAbs)) Directory.Delete(lmFolderAbs, true); } catch (Exception ex) { Runtime.Debug.LogWarning($"[Lightmap] Failed to clear lightmap folder: {ex.Message}"); }
         }
 
         // Everything the bake produced lives on the scene, so clearing is dropping it. Nothing has to be
@@ -265,7 +265,7 @@ public sealed class LightmapBakeService
         string lmFolderAbs = Path.Combine(assetsRoot, lmFolderRel);
 
         // Rebake replaces: clear the folder.
-        try { if (Directory.Exists(lmFolderAbs)) Directory.Delete(lmFolderAbs, true); } catch { }
+        try { if (Directory.Exists(lmFolderAbs)) Directory.Delete(lmFolderAbs, true); } catch (Exception ex) { Runtime.Debug.LogWarning($"[Lightmap] Failed to clear previous lightmaps: {ex.Message}"); }
         Directory.CreateDirectory(lmFolderAbs);
 
         // Write + import each atlas page (RGBM PNG).

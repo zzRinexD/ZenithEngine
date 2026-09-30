@@ -128,7 +128,10 @@ public static class RecentProjects
                 return entries;
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Runtime.Debug.LogWarning($"[Projects] Failed to load recent projects: {ex.Message}");
+        }
         return new();
     }
 

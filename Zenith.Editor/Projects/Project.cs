@@ -158,7 +158,10 @@ public class Project
                 if (doc.RootElement.TryGetProperty("name", out var nameProp))
                     name = nameProp.GetString() ?? name;
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Runtime.Debug.LogWarning($"[Project] Failed to read '{zenithFiles[0]}': {ex.Message} (using folder name)");
+            }
         }
 
         var project = new Project(rootPath, name);

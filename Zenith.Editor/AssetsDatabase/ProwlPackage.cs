@@ -373,7 +373,10 @@ public static class ProwlPackage
                     string gltfText = File.ReadAllText(absAssetPath);
                     results.AddRange(ExtractUriReferences(gltfText, dir));
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[Package] Failed to scan glTF deps of '{absAssetPath}': {ex.Message}");
+                }
                 break;
 
             case ".obj":
@@ -393,7 +396,10 @@ public static class ProwlPackage
                         }
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[Package] Failed to scan OBJ deps of '{absAssetPath}': {ex.Message}");
+                }
                 break;
         }
         return results;

@@ -277,7 +277,7 @@ public static class EditorRegistries
         var attr = type.GetCustomAttribute<CustomThumbnailGeneratorAttribute>();
         if (attr == null) return;
         try { _thumbnailGenerators[attr.TargetType] = (IThumbnailGenerator)Activator.CreateInstance(type)!; }
-        catch { }
+        catch (Exception ex) { Debug.LogWarning($"[Registries] Failed to create thumbnail generator {type.Name}: {ex.Message}"); }
     }
 
     private static void ScanSceneTool(Type type)

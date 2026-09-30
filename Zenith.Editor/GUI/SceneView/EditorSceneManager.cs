@@ -285,6 +285,9 @@ public static class EditorSceneManager
             general.LastScenePath = path;
             EditorRegistries.SaveSettings();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[SceneManager] Failed to save last scene path: {ex.Message}");
+        }
     }
 }

@@ -342,7 +342,7 @@ public static class ScriptAssemblyManager
             loaded.Add(asm);
 
             if (s_nativeResolver != null && s_nativePlugins.Count > 0)
-                try { NativeLibrary.SetDllImportResolver(asm, s_nativeResolver); } catch { }
+                try { NativeLibrary.SetDllImportResolver(asm, s_nativeResolver); } catch (Exception ex) { Runtime.Debug.LogWarning($"[ScriptAssemblyManager] Failed to set import resolver for '{asm.GetName().Name}': {ex.Message}"); }
         }
         return loaded;
     }
@@ -422,7 +422,7 @@ public static class ScriptAssemblyManager
 
             // Undo history holds closures + references captured against the old code; a recompile is a natural
             // boundary, so drop it. Do this before the walk so watching the editor doesn't migrate it needlessly.
-            try { Undo.Clear(); } catch { }
+            try { Undo.Clear(); } catch (Exception ex) { Runtime.Debug.LogWarning($"[ScriptAssemblyManager] Failed to clear undo history after hot-reload: {ex.Message}"); }
 
             // Migrate the live scene onto the new types (both assemblies loaded, no unload needed). Do this
             // BEFORE committing the new context as active, so a mid-migration throw leaves the old assemblies
