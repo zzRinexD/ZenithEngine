@@ -866,7 +866,7 @@ public static class Undo
     }
 
     // Fields that must never be overwritten by undo they are identity/internal state
-    private static readonly HashSet<string> _undoSkipFields = new()
+    internal static readonly HashSet<string> _undoSkipFields = new()
     {
         "_identifier",        // MonoBehaviour identity must be preserved
         "_instanceID",        // EngineObject instance ID
@@ -879,6 +879,8 @@ public static class Undo
         "AssetPath",          // Asset path
         "<IsDisposed>k__BackingField", // Disposed state
     };
+
+    internal static IReadOnlyCollection<string> GetSkipFieldsForTesting() => _undoSkipFields;
 
     /// <summary>
     /// Copy serializable fields from an EchoObject onto a live object.
