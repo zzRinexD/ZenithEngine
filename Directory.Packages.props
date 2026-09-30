@@ -1,0 +1,40 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <!-- Shared version for all Prowl.* NuGet packages -->
+  <PropertyGroup>
+    <ProwlPackageVersion>3.5.0</ProwlPackageVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Prowl.* (Anthology) — all share ProwlPackageVersion -->
+    <PackageVersion Include="Prowl.Aperture" Version="$(ProwlPackageVersion)" />
+    <PackageVersion Include="Prowl.Clay" Version="$(ProwlPackageVersion)" />
+    <PackageVersion Include="Prowl.Echo" Version="$(ProwlPackageVersion)" />
+    <PackageVersion Include="Prowl.Ember" Version="$(ProwlPackageVersion)" />
+    <PackageVersion Include="Prowl.Ember.Analyzers" Version="$(ProwlPackageVersion)" />
+    <PackageVersion Include="Prowl.Ember.Contracts" Version="$(ProwlPackageVersion)" />
+    <PackageVersion Include="Prowl.Origami" Version="$(ProwlPackageVersion)" />
+    <PackageVersion Include="Prowl.Paper" Version="$(ProwlPackageVersion)" />
+    <PackageVersion Include="Prowl.Photonic" Version="$(ProwlPackageVersion)" />
+    <PackageVersion Include="Prowl.Recast" Version="$(ProwlPackageVersion)" />
+    <PackageVersion Include="Prowl.Rosetta" Version="$(ProwlPackageVersion)" />
+    <PackageVersion Include="Prowl.Unwrapper" Version="$(ProwlPackageVersion)" />
+
+    <!-- Third-party -->
+    <PackageVersion Include="Jitter2" Version="2.8.11" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.6.0" />
+    <PackageVersion Include="Silk.NET" Version="2.23.0" />
+    <PackageVersion Include="Silk.NET.OpenAL.Soft.Native" Version="1.23.1" />
+
+    <!-- Testing -->
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.11.0" />
+    <PackageVersion Include="NSubstitute" Version="5.1.0" />
+    <PackageVersion Include="Serilog.Extensions.Logging" Version="8.0.0" />
+    <PackageVersion Include="Serilog.Sinks.InMemory" Version="0.11.0" />
+    <PackageVersion Include="Xunit" Version="2.9.0" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+</Project>
