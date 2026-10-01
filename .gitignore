@@ -364,3 +364,6 @@ tmp_*.txt
 
 # Local build output
 Build/
+
+# Code coverage output from local test runs
+coverage/

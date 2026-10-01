@@ -38,7 +38,28 @@ jobs:
         run: dotnet build Zenith.sln --configuration Debug --no-restore
 
       - name: Test (Runtime)
-        run: dotnet test Zenith.Runtime.Test/Zenith.Runtime.Test.csproj --configuration Debug --no-build
+        run: >
+          dotnet test Zenith.Runtime.Test/Zenith.Runtime.Test.csproj
+          --configuration Debug
+          --no-build
+          --settings .runsettings
+          --collect:"XPlat Code Coverage"
+          --results-directory ./coverage/runtime
 
       - name: Test (Editor)
-        run: dotnet test Zenith.Editor.Test/Zenith.Editor.Test.csproj --configuration Debug --no-build
+        run: >
+          dotnet test Zenith.Editor.Test/Zenith.Editor.Test.csproj
+          --configuration Debug
+          --no-build
+          --settings .runsettings
+          --collect:"XPlat Code Coverage"
+          --results-directory ./coverage/editor
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.os }}
+          path: ./coverage/**/*.cobertura.xml
+          retention-days: 30
+          if-no-files-found: warn

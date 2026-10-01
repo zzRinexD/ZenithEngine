@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura,opencover</Format>
+          <Exclude>[*]*.Tests.*,[*]*.Test.*,[xunit.*]*,[Microsoft.*]*,[System.*]*</Exclude>
+          <!-- CompilerGeneratedAttribute intentionally omitted: coverlet 6.0.2 drops the whole
+               Prowl.Runtime module when it is present (report comes back with 0 lines).
+               Re-add it once coverlet fixes module-level filtering. -->
+          <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute</ExcludeByAttribute>
+          <ExcludeByFile>**/obj/**,**/bin/**,**/Build/**</ExcludeByFile>
+          <SkipAutoProps>true</SkipAutoProps>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
