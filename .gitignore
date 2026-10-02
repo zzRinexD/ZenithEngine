@@ -367,3 +367,6 @@ Build/
 
 # Code coverage output from local test runs
 coverage/
+
+# Transfer documents between AI sessions (local iteration)
+docs/TRASPASO.md
