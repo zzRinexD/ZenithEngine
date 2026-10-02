@@ -92,6 +92,15 @@ internal sealed class FakeInputHandler : IInputHandler
     public void SetMouseDelta(Float2 delta) => MouseDelta = delta;
     public void SetMouseWheel(float delta) => MouseWheelDelta = delta;
 
+    // KNOWN ISSUE: sin esta limpieza los bordes "down/up" duran indefinidamente y un botón
+    // mantenido re-dispara OnPointerDown cada frame - igual que ClearKeyTransitions para teclas.
+    // See docs/PLAN_10_DE_10.md Fase 6. (H-UI-9)
+    public void ClearMouseButtonTransitions()
+    {
+        _mouseButtonsDown.Clear();
+        _mouseButtonsUp.Clear();
+    }
+
     public bool GetMouseButton(int button) => _mouseButtons.Contains(button);
     public bool GetMouseButtonDown(int button) => _mouseButtonsDown.Contains(button);
     public bool GetMouseButtonUp(int button) => _mouseButtonsUp.Contains(button);
