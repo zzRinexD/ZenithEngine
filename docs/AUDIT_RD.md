@@ -50,16 +50,17 @@ fallo en vivo porque `Graphics.Submit` **sí** corta en headless (`Graphics.cs:8
 invoca desde el hilo de render (`Graphics.cs:270`), que no arranca sin ventana. Es un **bloqueante de
 testabilidad** (ver H-RD-20).
 
-## Los 6 que están pinados en un test
+## Los 5 que están pinados en un test
 
 | ID | Test | Qué fija |
 |---|---|---|
-| H-RD-1 | `CommandBufferTests.Blit_ClearColorOnly_StillEncodesTheStencilBit` | `Blit` borra el stencil del destino sin que se le pidiera |
-| H-RD-4 | `CommandBufferTests.SetGlobalMatrices_CallerMutatesTheArrayAfterwards_AndTheStreamSeesIt` | La matriz se graba por referencia, sin snapshot |
-| H-RD-7 | `CommandBufferTests.DrawArrays_IsNotCountedInRenderStats` | Los draws sin índices no aparecen en el profiler |
-| H-RD-20 | (pendiente 3.3c) `CommandExecutorTests` | Sin guard headless ni rollback |
-| H-RD-40 | (pendiente 3.3b) `RenderPipelineTests` | El fallback instanciado fuerza `Topology.Triangles` |
-| H-RD-43 | (pendiente 3.3b) `RenderPipelineTests` | `1/0` sube `+Infinity` al UBO de uniforms globales |
+| H-RD-1 | `CommandBufferTests.Blit_ClearColorOnly_StillEncodesTheStencilBit` (3.3a) | `Blit` borra el stencil del destino sin que se le pidiera |
+| H-RD-4 | `CommandBufferTests.SetGlobalMatrices_CallerMutatesTheArrayAfterwards_AndTheStreamSeesIt` (3.3a) | La matriz se graba por referencia, sin snapshot |
+| H-RD-7 | `CommandBufferTests.DrawArrays_IsNotCountedInRenderStats` (3.3a) | Los draws sin índices no aparecen en el profiler |
+| H-RD-40 | `RenderPipelineTests.DrawRenderables_InstancedFallback_RecordsTrianglesWhateverTheMeshSays` (3.3b) | El fallback instanciado fuerza `Topology.Triangles` |
+| H-RD-43 | `RenderPipelineTests.SetupGlobalUniforms_WithNoSmoothDeltaTime_UploadsAnInfiniteReciprocal` (3.3b) | `1/0` sube `+Infinity` al UBO de uniforms globales |
+
+Pendiente de pinar: **H-RD-20** (bloque de 3.3c).
 
 Los otros 45 quedan **sólo en este inventario** (sin comentario en código).
 
@@ -162,3 +163,8 @@ Se llegaron a mirar y se descartan, para que nadie las vuelva a investigar:
 | El `DrawArrays` no cuenta en stats **y** tampoco es deduplicado; ningún encoder deduplica nada: el dedup vive en el ejecutor | `CommandBuffer.cs:133`, `CommandExecutor.cs:41-43` |
 | `GraphicsVertexArray`/`GraphicsProgram`/`GraphicsBuffer`/`GraphicsFrameBuffer` sí asignan su wrapper gestionado headless (sólo el `Handle` queda 0), así que el guard `mesh.VertexArrayObject == null` **no** cortocircuita en tests | `GraphicsVertexArray.cs:25-42`, `GraphicsProgram.cs:57-70` |
 | `PropertyState.ClearGlobals()` es un **no-op en headless**: renta un CB y lo manda a `Submit`, que lo dropea. Para teardown hay que llamar al `internal` `ClearGlobalsInternal()` | `PropertyState.cs:367` vs `:336` |
+| `LayerMask` guarda bits de **exclusión**, pero `FromMask` recibe bits de **inclusión** y los invierte | `LayerMask.cs:22-34` |
+| `EnsureWorldBounds` cachea por frame indexado sólo en `(ReferenceEquals(lista), count)`: una segunda pasada sobre la misma lista no pregunta nada | `RenderPipeline.cs:332` |
+| `SortRenderables` devuelve su `_sortResult` **reutilizado**, no una lista nueva: dos sorts consecutivos devuelven el mismo objeto | `RenderPipeline.cs:309,395` |
+| El primer pase del shader por defecto (`Standard.shader`) lleva `Tags { "RenderOrder" = "Opaque" }`, así que `DrawRenderables(..., "RenderOrder", "Opaque", ...)` —la forma que usa el pipeline— casa exactamente un pase | `Standard.shader:42` |
+| `Time.DeltaTime` sale de `TimeData.DeltaTime` sin llamar a `Update()`: con el `TimeData` de `RuntimeTestBase` es 1/60, pero **`SmoothDeltaTime` es 0**, y ése es el que se invierte sin guarda | `Time.cs:55`, `RuntimeTestBase.cs:44` |
