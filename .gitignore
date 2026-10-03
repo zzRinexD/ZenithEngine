@@ -354,7 +354,6 @@ FodyWeavers.xsd
 CHANGES.txt
 
 # Temporary files from AI sessions / debug output
-s
 editor_stdout.txt
 editor_stderr.txt
 tmp_*.txt
