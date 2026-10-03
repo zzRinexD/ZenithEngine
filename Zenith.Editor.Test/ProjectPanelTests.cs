@@ -6,6 +6,7 @@ using System.Reflection;
 
 using Prowl.Editor.GUI;
 using Prowl.Editor.GUI.Panels;
+using Prowl.Editor.GUI.Popups;
 using Prowl.OrigamiUI;
 
 using Xunit;
@@ -115,6 +116,28 @@ public class ProjectPanelTests : EditorTestHarness, IDisposable
 
     /// <summary>Private static method ProjectPanel.CanAcceptAssetDropInto(string).</summary>
     private bool CanAcceptAssetDropInto(string destination) => (bool)CallStatic("CanAcceptAssetDropInto", destination)!;
+
+    /// <summary>
+    /// Private instance method ProjectPanel.StartRename(ContentItem, bool) (line 1140). It only opens the
+    /// overlay; the move happens in its confirm callback.
+    /// </summary>
+    private void StartRename(ContentItem item, bool inTree) => CallInstance("StartRename", item, inTree);
+
+    /// <summary>
+    /// Private static RenameOverlay.Confirm() (RenameOverlay.cs:58). The overlay's own confirm is only
+    /// reachable through its Draw, which needs a Paper frame, so it is invoked directly with the text
+    /// field pre-set - which is exactly what pressing Enter does.
+    /// </summary>
+    private static void ConfirmRename(string newText)
+    {
+        typeof(RenameOverlay)
+            .GetField("_text", BindingFlags.Static | BindingFlags.NonPublic)!
+            .SetValue(null, newText);
+
+        typeof(RenameOverlay)
+            .GetMethod("Confirm", BindingFlags.Static | BindingFlags.NonPublic)!
+            .Invoke(null, null);
+    }
 
     /// <summary>Private static method ProjectPanel.IsFolderEmpty(string).</summary>
     private bool IsFolderEmpty(string relativePath) => (bool)CallStatic("IsFolderEmpty", relativePath)!;
@@ -565,5 +588,50 @@ public class ProjectPanelTests : EditorTestHarness, IDisposable
         StartAssetDrag("Material.mat#Albedo");
 
         Assert.True(CanAcceptAssetDropInto("Materials"));
+    }
+
+    // ================================================================
+    //  15. Renaming a folder that the panel is currently inside
+    // ================================================================
+
+    // Renaming a folder from the tree has to carry the content view along with it. When the folder being
+    // renamed is the one being browsed, the current path moves with it - and when it is an ancestor of it,
+    // the descendant's path changes too. The move on disk happens either way, so a stale current folder
+    // does not fail loudly: the panel points at a path that no longer exists, the content view comes up
+    // empty, and the breadcrumb shows a folder that is not there. Deleting does handle the descendant case
+    // (it also checks StartsWith), which is what makes the two paths disagree.
+    // See docs/PLAN_10_DE_10.md Fase 6. (H-ED-1)
+    [Fact]
+    public void RenamingAFolder_RebasesTheCurrentFolder_ButNotWhenItIsADescendant()
+    {
+        Directory.CreateDirectory(AssetAbsolutePath("Art/Textures"));
+        Assets.Refresh();
+        Assert.Contains(Assets.GetSubFolders(""), f => f.Name == "Art");
+
+        ContentItem art = new() { Name = "Art", RelativePath = "Art", IsFolder = true };
+
+        // Browsing the renamed folder itself: the path is carried over.
+        _panel.NavigateTo("Art");
+        StartRename(art, inTree: true);
+        ConfirmRename("Art2");
+
+        Assets.Refresh();
+        Assert.Contains(Assets.GetSubFolders(""), f => f.Name == "Art2");
+        Assert.Equal("Art2", CurrentFolder);
+
+        // Browsing a folder underneath the one being renamed: the descendant's path changes with it.
+        _panel.NavigateTo("Art2/Textures");
+        StartRename(new ContentItem { Name = "Art2", RelativePath = "Art2", IsFolder = true }, inTree: true);
+        ConfirmRename("Art3");
+
+        // The move happened, subfolder and all...
+        Assets.Refresh();
+        Assert.Contains(Assets.GetSubFolders(""), f => f.Name == "Art3");
+        Assert.Contains(Assets.GetSubFolders("Art3"), f => f.Name == "Textures");
+
+        // ...but the panel is still browsing the path the folder had before the rename. Renaming the
+        // folder itself is handled one level up; a folder further down is not rebased at all, so this is
+        // where it should read "Art3/Textures" and does not.
+        Assert.Equal("Art2/Textures", CurrentFolder);
     }
 }
