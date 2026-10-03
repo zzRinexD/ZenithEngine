@@ -24,17 +24,35 @@ public static class EditorTheme
     // freshly-built target theme; TickOrigami advances the lerp once per frame.
 
     private static OrigamiTheme? _origamiTheme;
+    /// <summary>Whether a font was available when <see cref="_origamiTheme"/> was built; see the getter.</summary>
+    private static bool _origamiThemeHadFont;
 
     /// <summary>Live theme the editor pushes onto Origami's stack. Frame-fresh when transitioning.</summary>
     public static OrigamiTheme OrigamiTheme
     {
         get
         {
-            if (_origamiTheme == null || _origamiTheme.Font == null)
-                _origamiTheme = BuildOrigamiTheme();
+            // A theme built while no font is available is still a usable theme - colours, metrics and
+            // icons all resolved - so it is built once and kept. Rebuilding it on every access turned
+            // each colour read into a whole OrigamiTheme.CreateDefaults(): invisible once a font is
+            // loaded, but ~12 KB and ~26 us per read in a headless process, where it also made every
+            // measurement of the editor's drawing meaningless.
+            //
+            // The rebuild still happens in the case this check exists for: a font arriving after the
+            // theme was built, which is the only reason to want a fresh one.
+            bool haveFont = DefaultFont != null;
+            if (_origamiTheme != null && haveFont == _origamiThemeHadFont)
+                return _origamiTheme;
+
+            _origamiTheme = BuildOrigamiTheme();
+            _origamiThemeHadFont = haveFont;
             return _origamiTheme;
         }
-        private set => _origamiTheme = value;
+        private set
+        {
+            _origamiTheme = value;
+            _origamiThemeHadFont = DefaultFont != null;
+        }
     }
 
     private static OrigamiTheme? _origamiStart;
