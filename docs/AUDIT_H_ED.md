@@ -31,9 +31,23 @@ producción hay que actualizar la aserción, no sólo el comentario.
 | H-ED-8 | `ProjectPanelTests.ContentEntries_HiddenEntries_DoNotCountTowardsAFoldersEmptiness` | El toggle de ocultos no llega al árbol de carpetas |
 | H-ED-11 | `ProjectPanelTests.DisplayName_ADotfileWithExtensionsHidden_IsEmpty` | Nombre vacío para un dotfile con extensiones ocultas |
 | H-ED-43 | `ProjectPanelTests.FormatSize_OneDecimalDigits_FollowTheCurrentCulture` | Separador decimal dependiente de la cultura |
-| H-ED-1, 16, 18 | (pendiente 3.4b) `HierarchyPanelTests` | Renombrado no rebasa la carpeta actual; la búsqueda no expande ancestros; "primer hijo" invierte el orden |
+| H-ED-16 | `HierarchyPanelTests.BuildNodeList_SearchKeepsAncestorsOfMatches_ButDoesNotOpenThem` | La búsqueda conserva el ancestro en el modelo pero no fuerza su expansión |
+| H-ED-18 | `HierarchyPanelTests.ProcessGODropCore_DroppingAsFirstChild_ReversesTheOrderOfThePayload` | Soltar "como primer hijo" invierte el orden del payload |
 | H-ED-10 | (ancla en 3.4a) `ProjectPanelTests.ContentItem_Identity_IsGuidPlusRelativePath` | Identidad = GUID + ruta |
 | H-ED-29 | (pendiente 3.4c) `InspectorPanelTests` | Filtro `.meta` sensible a cultura y mayúsculas |
+| H-ED-1 | (pendiente 3.4c) `ProjectPanelTests` | Renombrar una carpeta no rebasa la carpeta actual cuando es un descendiente |
+
+### Comportamientos del panel que los tests dejaron fijados (no son bugs)
+
+Al escribir las aserciones aparecieron cuatro semánticas que no estaban documentadas en el código y que
+conviene tener escritas, porque son contrarias a la lectura intuitiva:
+
+| Comportamiento | Dónde | Nota |
+|---|---|---|
+| Un nodo oculto no aporta ni siquiera su propia fila: el walk retorna antes de agregarlo, así que se va su subárbol entero | `HierarchyPanel.cs:514` | No es "la fila se oculta": la fila no existe |
+| Reparentar al mismo padre es un no-op (`if (NewParent == _parent) return true`) | `GameObject.cs:275` | Por eso un segundo drop al mismo destino sólo reordena, no re-appendea |
+| `Stack.ToArray()` devuelve LIFO (cima primero) | `System.Collections.Generic.Stack` | Afecta a las aserciones del historial de carpetas |
+| `NavigateTo` empuja la carpeta **de la que se viene**, no la de destino | `ProjectPanel.cs:126` | La primera navegación ya deja `""` en la pila, que es lo que hace que Back vuelva a la raíz |
 
 ## ProjectPanel
 
