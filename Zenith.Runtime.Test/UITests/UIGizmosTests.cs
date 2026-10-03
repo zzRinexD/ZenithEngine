@@ -171,11 +171,11 @@ public class UIGizmosTests
         Assert.Contains(wire.Colors, c => c == WireColor(UIGizmos.PivotColor));
         Assert.Contains(wire.Colors, c => c == WireColor(UIGizmos.AnchorColor));
 
-        // GENERAL OBSERVATION (sin ID nuevo): DrawAnchorHandles lee el ComputedRect del padre, y
-        // RectTransform.ComputeRect solo lo escribe BuildRecursive sobre los *hijos* - el
-        // GameObject raiz del canvas nunca pasa por ComputeRect, asi que su ComputedRect.Size es 0
-        // y un hijo directo del canvas nunca recibe asas de ancla (hace falta anidar:
-        // canvas -> panel -> elem). Documentado aqui con el conteo exacto: 4 + 2 + 16 = 22 lineas.
+        // KNOWN ISSUE: DrawAnchorHandles no emite asas cuando el elemento es hijo directo del
+        // canvas (ComputedRect.Size == 0 en la raíz). See docs/PLAN_10_DE_10.md Fase 6. (H-UI-17)
+        // Motivo: DrawAnchorHandles lee el ComputedRect del padre, y RectTransform.ComputeRect
+        // solo lo escribe BuildRecursive sobre los *hijos* - el GameObject raiz del canvas nunca
+        // pasa por ComputeRect. Documentado aqui con el conteo exacto: 4 + 2 + 16 = 22 lineas.
         GameObject direct = ui.AddChild(canvasGo, "Direct");
         QuadProbe directProbe = direct.AddComponent<QuadProbe>();
         direct.RectTransform!.SizeDelta = new Float2(60f, 60f);
