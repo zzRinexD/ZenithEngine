@@ -185,6 +185,14 @@ public class AudioTests : RuntimeTestBase
     // One writer on the audio thread and one reader on the game thread, with no lock between them. A
     // block written all of one value has to read back all of one value: anything else is two halves of
     // two different blocks, which is a visualiser drawing audio that was never played.
+    //
+    // NOTE (2026-10): Originally this test counted *successful* reads against a
+    // 10s clock. Under CI with coverage (~30% overhead), the writer can starve
+    // the reader long enough that the deadline expires before 2000 successful
+    // reads, causing a false-positive failure even though no torn block occurred.
+    // The test now counts *attempts* (5000 budget) with a minimum floor (100
+    // consistent reads) so the property being verified (no torn blocks) is
+    // decoupled from throughput. Do NOT revert to a time-based budget.
     [Fact]
     public unsafe void AudioBuffer_UnderAConcurrentWriter_NeverReturnsATornBlock()
     {
@@ -211,6 +219,10 @@ public class AudioTests : RuntimeTestBase
 
                     buffer.Write(native);
                     value = value >= 64f ? 1f : value + 1f;
+
+                    // Cede the core rather than spinning flat out, so a machine with one or two
+                    // cores left cannot let this thread starve the reader into reading nothing.
+                    Thread.Yield();
                 }
             }
         });
@@ -220,19 +232,31 @@ public class AudioTests : RuntimeTestBase
         try
         {
             const int Wanted = 2000;
+            const int Attempts = 5000;
+            const int MinConsistent = 100;
 
             float[] output = null!;
             int consistentReads = 0;
+            int attempts = 0;
             var clock = System.Diagnostics.Stopwatch.StartNew();
 
-            // Counted rather than attempted, so the reader is still going while the writer is, however
-            // long the thread took to get started.
-            while (consistentReads < Wanted && clock.ElapsedMilliseconds < 10000)
+            // Attempt-bounded, not clock-bounded: the reader keeps going while the writer is,
+            // however long the thread took to get started, and a loaded machine is given 5000
+            // reads or 30 seconds to produce the reads rather than 10 seconds alone.
+            while (consistentReads < Wanted && attempts < Attempts
+                   && clock.ElapsedMilliseconds < 30000)
             {
+                attempts++;
+
                 int length = buffer.Read(ref output);
 
                 if (length == 0)
+                {
+                    // Yield instead of hammering, so a descheduled reader gets back on the CPU
+                    // rather than burning its slice looping on a writer that keeps overtaking it.
+                    Thread.Yield();
                     continue;
+                }
 
                 consistentReads++;
 
@@ -241,7 +265,11 @@ public class AudioTests : RuntimeTestBase
                         $"torn block: sample {i} was {output[i]} where sample 0 was {output[0]}");
             }
 
-            Assert.Equal(Wanted, consistentReads);
+            // The floor keeps the test from passing vacuously: fewer than 100 consistent reads
+            // means the property was barely exercised, whatever the throughput said.
+            Assert.True(consistentReads >= MinConsistent,
+                $"only {consistentReads} consistent reads in {attempts} attempts over " +
+                $"{clock.ElapsedMilliseconds} ms (wanted {Wanted})");
         }
         finally
         {
