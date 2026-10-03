@@ -194,7 +194,7 @@ public class DefaultRenderPipeline : RenderPipeline
 
         // =======================================================
         // 3. Collect and Cull Renderables
-        var (renderables, lights) = CollectRenderables(camera.GameObject.Scene, camera);
+        var (renderables, lights) = CollectRenderablesInto(camera.GameObject.Scene, camera);
         //lights.Clear();
 
         // Inject editor grid

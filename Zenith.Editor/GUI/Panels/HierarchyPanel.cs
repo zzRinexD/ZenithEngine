@@ -82,7 +82,15 @@ public class HierarchyPanel : DockPanel
     private Guid _treePingGuid;
     private bool _treeCacheValid;
 
-    /// <summary>Drops the cached hierarchy; the next frame rebuilds it.</summary>
+    /// <summary>
+    /// Drops the cached hierarchy, so the next frame rebuilds it.
+    /// <para/>
+    /// Not needed in normal operation: <see cref="EnsureTreeCache"/> revalidates what it cached on its
+    /// own - scene version, search text, ping, and then a per-row parent/name/enabled comparison - so
+    /// there is no flag here that a caller has to remember to set. It exists so that a caller which
+    /// changes the hierarchy *and* knows it has just done so can skip the revalidation for one frame,
+    /// and so tests can force a known state without reaching into the fields.
+    /// </summary>
     private void InvalidateTreeCache() => _treeCacheValid = false;
 
     /// <summary>

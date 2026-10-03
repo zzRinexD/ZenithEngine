@@ -243,6 +243,20 @@ public abstract class RenderPipeline : EngineObject
         return (renderables, lights);
     }
 
+    /// <summary>
+    /// The per-frame path: collects into this pipeline's own buffers rather than two fresh lists, so a
+    /// steady frame allocates nothing. Both are cleared first and then handed out, which means a caller
+    /// must be finished with them before the next camera renders - the same rule the batch and sort
+    /// scratch already follow, since encoding is sequential and never re-entrant.
+    /// </summary>
+    public (List<IRenderable> renderables, List<IRenderableLight> lights) CollectRenderablesInto(Scene scene, Camera camera)
+    {
+        _collectRenderables.Clear();
+        _collectLights.Clear();
+        scene.CollectRenderables(camera, _collectRenderables, _collectLights);
+        return (_collectRenderables, _collectLights);
+    }
+
     public virtual void Render(Camera camera, in RenderingData data)
     {
         // Clean up unused matrices after rendering
@@ -303,6 +317,13 @@ public abstract class RenderPipeline : EngineObject
         (a, b) => a.distSq.CompareTo(b.distSq);
     private static readonly Comparison<(IRenderable renderable, float distSq)> s_backToFront =
         (a, b) => b.distSq.CompareTo(a.distSq);
+
+    // Per-frame collection buffers, reused exactly like the sort and batch scratch around them.
+    // CollectRenderables used to hand out two fresh lists every frame, and a scene with a thousand
+    // renderables spent ~16 KB per frame per camera reallocating their backing arrays as they grew -
+    // the sum of every doubling from 4 up to 1024, for a result nobody keeps past the frame.
+    private readonly List<IRenderable> _collectRenderables = new(256);
+    private readonly List<IRenderableLight> _collectLights = new(16);
 
     // Reused across frames; only one sort is in flight at a time (sequential encode).
     private readonly List<(IRenderable renderable, float distSq)> _sortPairs = new();
