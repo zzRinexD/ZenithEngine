@@ -60,6 +60,96 @@ public class HierarchyPanel : DockPanel
     // "below" drop on an expanded node into a "first child" drop (where its first child visually sits).
     private readonly Dictionary<string, bool> _expandState = new();
 
+    // ── Tree cache ────────────────────────────────────────────────────────────
+    // The flattened hierarchy used to be rebuilt on every frame, which allocated two lists, one
+    // TreeNode and one guid string per node: ~96 KB every frame at 1000 nodes, and the single
+    // largest allocator in the panel. The result is cached here and only rebuilt when something it
+    // depends on has actually changed.
+    //
+    // Scene.Version covers add, remove, attach, detach and root reordering, but it does NOT change
+    // on a reparent, a rename or an EnabledInHierarchy toggle - and those can come from a script, the
+    // inspector, undo or another panel without telling us. So a cache that merely looks fresh still
+    // gets a revalidation pass: one reference compare, one string compare and one bool per node, and
+    // not one allocation. That is what makes the cache safe without a dirty flag to forget to set.
+    private readonly List<TreeNode> _treeNodes = new(64);
+    private readonly List<object> _treeFlatObjects = new(64);
+    private readonly List<GameObject?> _treeParents = new(64);
+    private readonly List<bool> _treeEnabled = new(64);
+    private readonly Dictionary<GameObject, string> _nodeIds = new(64);
+    private readonly List<GameObject> _treeRoots = new(64);
+    private int _treeSceneVersion = -1;
+    private string _treeSearch = "";
+    private Guid _treePingGuid;
+    private bool _treeCacheValid;
+
+    /// <summary>Drops the cached hierarchy; the next frame rebuilds it.</summary>
+    private void InvalidateTreeCache() => _treeCacheValid = false;
+
+    /// <summary>
+    /// The flattened hierarchy for this frame, rebuilding only when the cached one cannot be trusted.
+    /// A drag always rebuilds: the drop indicator under the pointer is frame state by definition, and
+    /// a drag is over in a second.
+    /// </summary>
+    private void EnsureTreeCache(Scene scene)
+    {
+        if (!DragDrop.IsDragging && !DragDrop.IsDropFrame
+            && _treeCacheValid
+            && _treeSceneVersion == scene.Version
+            && _treeSearch == _searchText
+            && _treePingGuid == Selection.PingedGuid
+            && TreeCacheStillMatches())
+            return;
+
+        RebuildTreeCache(scene);
+    }
+
+    private void RebuildTreeCache(Scene scene)
+    {
+        _treeNodes.Clear();
+        _treeFlatObjects.Clear();
+        _treeParents.Clear();
+        _treeEnabled.Clear();
+        _nodeIds.Clear();
+        _treeRoots.Clear();
+        _treeRoots.AddRange(GetDisplayRoots(scene));
+
+        foreach (GameObject root in _treeRoots)
+            BuildNodeList(root, 0, _treeNodes, _treeFlatObjects);
+
+        for (int i = 0; i < _treeFlatObjects.Count; i++)
+        {
+            var go = (GameObject)_treeFlatObjects[i];
+            _treeParents.Add(go.Parent);
+            _treeEnabled.Add(go.EnabledInHierarchy);
+        }
+
+        _treeSceneVersion = scene.Version;
+        _treeSearch = _searchText;
+        _treePingGuid = Selection.PingedGuid;
+        _treeCacheValid = true;
+    }
+
+    /// <summary>
+    /// Allocation-free revalidation of every cached row: a destroyed object, a reparent, a rename or an
+    /// enable toggle all mean the cache is stale, whoever caused them. Returns false to force a rebuild.
+    /// </summary>
+    private bool TreeCacheStillMatches()
+    {
+        for (int i = 0; i < _treeFlatObjects.Count; i++)
+        {
+            var go = (GameObject)_treeFlatObjects[i];
+            if (!go.IsValid() || !ReferenceEquals(go.Parent, _treeParents[i])) return false;
+            if (go.EnabledInHierarchy != _treeEnabled[i]) return false;
+            if (_treeNodes[i].Label != go.Name) return false;
+        }
+
+        // The drop indicator follows the pointer, so it is cleared here rather than rebuilt for.
+        for (int i = 0; i < _treeNodes.Count; i++)
+            _treeNodes[i].DropIndicator = null;
+
+        return true;
+    }
+
     public override void OnGUI(Paper paper, float width, float height)
     {
         _paper = paper;
@@ -291,11 +381,9 @@ public class HierarchyPanel : DockPanel
                 if (PrefabEditingMode.IsEditing)
                     usedHeight += 28; // prefab breadcrumb row + margins
                 float scrollHeight = height - usedHeight;
-                var roots = GetDisplayRoots(scene);
-                var treeNodes = new List<TreeNode>();
-                var flatObjects = new List<object>();
-                foreach (var root in roots)
-                    BuildNodeList(root, 0, treeNodes, flatObjects);
+                EnsureTreeCache(scene);
+                List<TreeNode> treeNodes = _treeNodes;
+                List<object> flatObjects = _treeFlatObjects;
 
                 // Scroll-to-ping: when a newly-pinged GO lives in the scene, center its row in the
                 // scroll view so the yellow highlight is actually visible.
@@ -363,7 +451,13 @@ public class HierarchyPanel : DockPanel
                     {
                         if (font == null) return;
                         var go = (GameObject)node.UserData!;
-                        string goId = go.Identifier.ToString();
+// The id is a GUID, and ToString() on it was the largest allocation in the panel: one string
+        // per node. It never changes for a given object, so it is interned per rebuild instead.
+        if (!_nodeIds.TryGetValue(go, out string? goId))
+        {
+            goId = go.Identifier.ToString();
+            _nodeIds[go] = goId;
+        }
 
                         // Icon (vector, chosen from the GameObject's first component + coloured)
                         var (goIcon, goColor) = GetGoStyle(go);
