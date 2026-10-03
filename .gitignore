@@ -351,9 +351,6 @@ FodyWeavers.xsd
 .kilo/
 
 # AI diagnostic files (never commit)
-Inspect*.cs
-Inspect*Proj/
-inspect.cs
 CHANGES.txt
 
 # Temporary files from AI sessions / debug output
