@@ -50,19 +50,27 @@ fallo en vivo porque `Graphics.Submit` **sí** corta en headless (`Graphics.cs:8
 invoca desde el hilo de render (`Graphics.cs:270`), que no arranca sin ventana. Es un **bloqueante de
 testabilidad** (ver H-RD-20).
 
-## Los 5 que están pinados en un test
+## Los 6 que están pinados en un test
 
 | ID | Test | Qué fija |
 |---|---|---|
 | H-RD-1 | `CommandBufferTests.Blit_ClearColorOnly_StillEncodesTheStencilBit` (3.3a) | `Blit` borra el stencil del destino sin que se le pidiera |
 | H-RD-4 | `CommandBufferTests.SetGlobalMatrices_CallerMutatesTheArrayAfterwards_AndTheStreamSeesIt` (3.3a) | La matriz se graba por referencia, sin snapshot |
 | H-RD-7 | `CommandBufferTests.DrawArrays_IsNotCountedInRenderStats` (3.3a) | Los draws sin índices no aparecen en el profiler |
+| H-RD-20 | `CommandExecutorTests.Execute_ACommandThatTouchesTheDevice_ThrowsNullReferenceWithoutAGuard` (3.3c) | Sin guard headless ni rollback: la NRE aborta el bucle |
 | H-RD-40 | `RenderPipelineTests.DrawRenderables_InstancedFallback_RecordsTrianglesWhateverTheMeshSays` (3.3b) | El fallback instanciado fuerza `Topology.Triangles` |
 | H-RD-43 | `RenderPipelineTests.SetupGlobalUniforms_WithNoSmoothDeltaTime_UploadsAnInfiniteReciprocal` (3.3b) | `1/0` sube `+Infinity` al UBO de uniforms globales |
 
-Pendiente de pinar: **H-RD-20** (bloque de 3.3c).
-
 Los otros 45 quedan **sólo en este inventario** (sin comentario en código).
+
+## Hueco de cobertura declarado: los 36 opcodes de GPU
+
+Quedan **fuera de toda cobertura** y no son una omisión floja sino una limitación comprobada:
+
+- **Los 36 opcodes que llegan a `Graphics.GL`**, todo `PrepareDraw` (`:884-935`), `DoClear` (`:762`), `DoBlit` (`:788`) y **los espejos de estado** (`_lastDrawFb`, `_lastReadFb`, `_lastBoundVAO`, `_boundProgram`, `_raster`).
+- **Por qué no se puede cubrir:** los wrappers de Silk.NET son P/Invoke **no virtuales**, así que `NSubstitute` no puede interceptarlos. Cubrirlos exigiría o un `GL` real, o una refactorización de producción para inyectar una abstracción de dispositivo — y esta fase prohibido tocar producción.
+- **Lo que sí se cubre del dispatch:** las ~21 rutas de `PropertyState.s_global*` de extremo a extremo (codificar → ejecutar → getter público), los *early-out* por `vao == null` y blob vacío, la traducción de topologías, el opcode desconocido, y **dónde aborta el bucle** ante el primer comando de GPU (H-RD-20), incluido el hecho de que las mutaciones CPU anteriores quedan committeadas.
+- **Cómo cerrarlo en el futuro:** una abstracción `IGraphicsDevice` sobre la que el ejecutor llame, más una implementación de test que cuente llamadas. Permitiría fijar las invariantes de deduplicación de los espejos (`ApplyRenderTarget` sólo reemite el viewport cuando el bind se saltó — H-RD-32) y el orden de `PrepareDraw`. Es trabajo de Fase 6, no de tests.
 
 ## CommandBuffer
 
