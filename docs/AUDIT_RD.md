@@ -176,3 +176,17 @@ Se llegaron a mirar y se descartan, para que nadie las vuelva a investigar:
 | `SortRenderables` devuelve su `_sortResult` **reutilizado**, no una lista nueva: dos sorts consecutivos devuelven el mismo objeto | `RenderPipeline.cs:309,395` |
 | El primer pase del shader por defecto (`Standard.shader`) lleva `Tags { "RenderOrder" = "Opaque" }`, así que `DrawRenderables(..., "RenderOrder", "Opaque", ...)` —la forma que usa el pipeline— casa exactamente un pase | `Standard.shader:42` |
 | `Time.DeltaTime` sale de `TimeData.DeltaTime` sin llamar a `Update()`: con el `TimeData` de `RuntimeTestBase` es 1/60, pero **`SmoothDeltaTime` es 0**, y ése es el que se invierte sin guarda | `Time.cs:55`, `RuntimeTestBase.cs:44` |
+
+## Descartados como problema de rendimiento (Fase 5A / 5B)
+
+Medidos el 2026-10 con arnés temporal. Ambos son reales como bug, pero **no son un problema de
+rendimiento**: el consumo está acotado o no afecta a nadie.
+
+| ID | Medida | Por qué se descarta como perf | Dónde va |
+|---|---|---|---|
+| **H-RD-11** — `_stream` de `CommandBuffer` dobla y nunca se recorta | 1000 draws → 128 KB de capacidad, **28% de desperdicio**; 5000 draws → 512 KB | Está **acotado por el pool**: como mucho 64 buffers (el tope de `CommandBufferPool`), o sea **≤8 MB** en el peor caso real (1000 draws) y ~32 MB en un caso extremo de 5000 draws que ningún juego alcanza. No crece con el tiempo: sólo con el frame más grande que se haya dibujado nunca | Fase 6, opcional (trim por encima de un umbral) |
+| **H-RD-50** — nadie llama a `RenderStats.BeginFrame/EndFrame` en Runtime | Sin ellos, `RenderStats.Last` no cambia: medido, tras un draw sigue mostrando los valores del frame anterior | **No afecta al editor**, que es quien lee `Last`: `GameViewPanel` sí los llama (`:145,159`). Sólo importa si alguien construye un profiler dentro del juego, que hoy no existe | Fase 6, al añadir profiler in-game |
+
+Nota sobre el primero: el desperdicio no es el problema, **fijación** lo es. Un solo frame grande deja ese
+array grande para siempre en ese buffer del pool. Con 64 buffers, el techo son 64 × el peor frame visto.
+Medido en el editor real: el rebuild de 1000 draws ocupa 438 KB, muy por debajo de los 8 MB del techo.

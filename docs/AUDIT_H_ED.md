@@ -135,3 +135,18 @@ Se llegaron a mirar y **no** son bugs (anotados para que nadie los vuelva a inve
 - `FindGOByIdentifier` (`HierarchyPanel.cs:1261`) es código muerto: no tiene call site.
 - La búsqueda en `BuildNodeList` llama a `go.GetChildrenDeep()` por nodo cuando hay texto de búsqueda: O(n·subárbol) por pulsación de tecla.
 - La caída de `DragDrop.EndDrag()` tras una validación fallida (`ProjectPanel.cs:255`) es probablemente inocua: el framework ya terminó el arrastre en el frame del drop (no verificable sin el fuente de Origami).
+
+## Descartados como problema de rendimiento (Fase 5A)
+
+Medidos con un arnés temporal el 2026-10 (Fase 5A, "nada de optimizar sin medir"). Los tres son
+bugs **de corrección** y siguen abiertos para Fase 6, pero **no son un problema de rendimiento**: la
+memoria que retienen es irrelevante y no crece sin límite.
+
+| ID | Medida | Por qué se descarta como perf | Dónde va |
+|---|---|---|---|
+| **H-ED-3** — el historial de carpetas nunca se poda | 50 navegaciones dejan `back = 50` entradas | ~50 cadenas ≈ **2 KB**. El coste de `NavBack` es el mismo con 5 que con 500 entradas. Lo que duele es la corrección: Back puede navegar a una carpeta que ya no existe | Fase 6, corrección |
+| **H-ED-10** — `Selection` no se reconcilia | 200 selecciones acumuladas → 200 objetos retenidos; tras destruir 100, **siguen los 200** | 200 referencias ≈ **1,6 KB**. Retener refs destruidas no cuesta memoria apreciable; cuesta que el inspector y el contador del footer muestren objetos que ya no existen | Fase 6, corrección |
+| **H-ED-23** — `_expandState` nunca se limpia | 5000 ids sembrados = **160 KB** (32 B por entrada); sobreviven a `BuildNodeList` e `IsTargetExpanded`; un panel nuevo arranca a 0 | **No es un leak**: está acotado por el número de nodos distintos que el panel ha dibujado alguna vez y se reinicia al reabrir el panel. El coste de buscar en un diccionario de miles de entradas es despreciable frente a dibujar las filas | Fase 6, corrección (y de paso: los nodos borrados dejan entradas `true` obsoletas que `IsTargetExpanded` consulta) |
+
+Los tres fueron descartados **midiendo**, no opinando. Conclusión de la fase: los hotspots de editor que
+quedaron fuera de la lista de P0 no lo son por estos motivos.
