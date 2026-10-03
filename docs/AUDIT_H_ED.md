@@ -34,12 +34,12 @@ producción hay que actualizar la aserción, no sólo el comentario.
 | H-ED-16 | `HierarchyPanelTests.BuildNodeList_SearchKeepsAncestorsOfMatches_ButDoesNotOpenThem` | La búsqueda conserva el ancestro en el modelo pero no fuerza su expansión |
 | H-ED-18 | `HierarchyPanelTests.ProcessGODropCore_DroppingAsFirstChild_ReversesTheOrderOfThePayload` | Soltar "como primer hijo" invierte el orden del payload |
 | H-ED-10 | (ancla en 3.4a) `ProjectPanelTests.ContentItem_Identity_IsGuidPlusRelativePath` | Identidad = GUID + ruta |
-| H-ED-29 | (pendiente 3.4c) `InspectorPanelTests` | Filtro `.meta` sensible a cultura y mayúsculas |
-| H-ED-1 | (pendiente 3.4c) `ProjectPanelTests` | Renombrar una carpeta no rebasa la carpeta actual cuando es un descendiente |
+| H-ED-1 | `ProjectPanelTests.RenamingAFolder_RebasesTheCurrentFolder_ButNotWhenItIsADescendant` | Renombrar una carpeta no rebasa la carpeta actual cuando es un descendiente |
+| H-ED-29 | `InspectorPanelTests.GetFolderCounts_SkipsLowercaseMetaFilesButCountsUppercaseOnes` | Filtro `.meta` sensible a cultura y mayúsculas, y el recuento equivocado se cachea |
 
 ### Comportamientos del panel que los tests dejaron fijados (no son bugs)
 
-Al escribir las aserciones aparecieron cuatro semánticas que no estaban documentadas en el código y que
+Al escribir las aserciones aparecieron semánticas que no estaban documentadas en el código y que
 conviene tener escritas, porque son contrarias a la lectura intuitiva:
 
 | Comportamiento | Dónde | Nota |
@@ -48,6 +48,10 @@ conviene tener escritas, porque son contrarias a la lectura intuitiva:
 | Reparentar al mismo padre es un no-op (`if (NewParent == _parent) return true`) | `GameObject.cs:275` | Por eso un segundo drop al mismo destino sólo reordena, no re-appendea |
 | `Stack.ToArray()` devuelve LIFO (cima primero) | `System.Collections.Generic.Stack` | Afecta a las aserciones del historial de carpetas |
 | `NavigateTo` empuja la carpeta **de la que se viene**, no la de destino | `ProjectPanel.cs:126` | La primera navegación ya deja `""` en la pila, que es lo que hace que Back vuelva a la raíz |
+| `GetEntry` sólo indexa **ficheros**: una carpeta no tiene entrada | `EditorAssetBackend.cs:971` | ElFolder.exists se comprueba con `Directory.Exists` o con el índice de carpetas, nunca con `GetEntry` |
+| `Assets.GetSubFolders("")` sólo incluye carpetas **no ocultas** | `EditorAssetBackend.cs:1323` | Coherente con el salto de dot-dirs del índice, y es la razón por la que "Show Hidden" no puede llegar al árbol |
+| `Confirm()` del overlay de renombrado es privado y sólo se llama desde su `Draw` | `RenameOverlay.cs:58,88` | Para probar el renombrado headless hay que invocar `Confirm` y `_text` por reflexión, que es justo lo que hace Enter |
+| La cache de recuentos se invalida por `ContentVersion`, con `-1` como "sin base de datos" | `InspectorPanel.cs:626` | El valor inicial de `_folderCountsVersion` también es `-1`, así que sin `Instance` la cache nunca se limpia |
 
 ## ProjectPanel
 
