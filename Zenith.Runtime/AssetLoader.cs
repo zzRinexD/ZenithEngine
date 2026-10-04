@@ -35,6 +35,10 @@ public static class AssetLoader
     // Counts pending items so the loop sleeps when idle instead of spinning.
     private static readonly SemaphoreSlim _signal = new(0);
 
+    // How long LoadBlocking waits for the loader thread before giving up. A last-resort bound so a
+    // wedged loader surfaces as a logged error plus a null, not as a frozen editor.
+    private const int WaitTimeoutMs = 5000;
+
     private static readonly object _startLock = new();
     private static Thread? _thread;
     private static volatile bool _running;
@@ -70,9 +74,12 @@ public static class AssetLoader
         var cached = AssetDatabase.GetCached(id);
         if (cached != null) return cached;
 
-        // Re-entrant from the loader thread (a deserialize asked to block on a dependency):
-        // load inline on this thread. Enqueueing would wait on the only thread that drains.
-        if (_isLoaderThread)
+        // Re-entrant from a thread that is already inside a load: the loader thread itself, or any thread
+        // holding the backend's load lock (a deserialize asking for a dependency). Load inline on
+        // this thread. Enqueueing would wait on the only thread that drains, and if this thread is
+        // the lock holder that loader is itself blocked on the lock we are holding - an AB-BA
+        // deadlock that no timeout can untangle (H-RD-54).
+        if (_isLoaderThread || AssetBackendBase.IsLoadingOnThisThread)
             return AssetDatabase.Get(id);
 
         EnsureStarted();
@@ -96,7 +103,21 @@ public static class AssetLoader
         }
         if (enqueued) _signal.Release();
 
-        ev.Wait();
+        if (!ev.Wait(WaitTimeoutMs))
+        {
+            // Safety net, not the fix: the real deadlock (H-RD-54) is resolved inline above. This
+            // only bounds the damage if some other path ever wedges the loader thread, so the caller
+            // gets null and a diagnostic instead of an editor that never comes back. The waiter entry
+            // is deliberately left in place: the loader removes and signals it whenever it does get
+            // to the asset, and a later LoadBlocking for the same id would reuse that event rather
+            // than orphan it on a new one.
+            Debug.LogError(
+                $"[AssetLoader] Timed out after {WaitTimeoutMs} ms waiting for asset {id} to load. " +
+                "Returning whatever is cached (null if it never finished). The loader thread is " +
+                "probably blocked.");
+            return AssetDatabase.GetCached(id);
+        }
+
         return AssetDatabase.GetCached(id);
     }
 

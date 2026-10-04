@@ -144,6 +144,18 @@ public abstract class AssetBackendBase
     [ThreadStatic] private static HashSet<Guid>? _loadingStack;
     protected readonly object _loadLock = new();
 
+    // Depth of _loadLock ownership on this thread. Monitor gives no way to ask "do I hold this
+    // lock?", and AssetLoader needs exactly that answer: a LoadFresh that asks for another asset
+    // cannot enqueue the request and wait, because the loader thread would block on this very lock
+    // while this thread waits for the loader. Publishing the depth lets it resolve inline instead
+    // (H-RD-54). Zero on any thread not currently inside Get.
+    [ThreadStatic] private static int _loadDepth;
+
+    /// <summary>True while the calling thread holds the backend's load lock, i.e. it is inside
+    /// <see cref="Get"/>. Lets a nested load resolve inline instead of queueing behind a loader
+    /// thread that is blocked on the same lock.</summary>
+    internal static bool IsLoadingOnThisThread => _loadDepth > 0;
+
     /// <summary>
     /// Retrieves an <see cref="EngineObject"/> by its asset ID. May block while the asset is
     /// deserialized (and, in the editor, imported on demand). Called on the <see cref="AssetLoader"/>
@@ -163,9 +175,17 @@ public abstract class AssetBackendBase
         {
             lock (_loadLock)
             {
-                if (TryGetLoaded(assetId, out loaded))
-                    return loaded;
-                return LoadFresh(assetId);
+                _loadDepth++;
+                try
+                {
+                    if (TryGetLoaded(assetId, out loaded))
+                        return loaded;
+                    return LoadFresh(assetId);
+                }
+                finally
+                {
+                    _loadDepth--;
+                }
             }
         }
         finally
