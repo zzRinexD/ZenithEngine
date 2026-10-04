@@ -154,7 +154,16 @@ public static unsafe class Graphics
         s_renderFrameDone.Reset();
     }
 
-/// <summary>Time the main thread spent blocked in <see cref="EndFrameAndWait"/>
+    /// <summary>How long the main thread waits for the render thread to signal the frame-end
+    /// sentinel, and for it to exit on shutdown, before declaring it dead.</summary>
+    /// <remarks>
+    /// Only trips when the render thread is gone, never because it is merely slow: the thread does
+    /// nothing per frame but <c>SwapBuffers</c> plus whatever the queue held, so a healthy thread
+    /// signals in single-digit milliseconds. Tests lower it so they don't pay the full wait.
+    /// </remarks>
+    internal static int RenderGateTimeoutMs = 5000;
+
+    /// <summary>Time the main thread spent blocked in <see cref="EndFrameAndWait"/>
     /// last frame. High = render thread is bottleneck. Near-zero = main is.</summary>
     public static float LastFrameWaitMs { get; private set; }
 
@@ -162,9 +171,22 @@ public static unsafe class Graphics
     {
         s_renderQueue.Add(new CBJob { IsFrameEnd = true });
         long start = System.Diagnostics.Stopwatch.GetTimestamp();
-        s_renderFrameDone.Wait();
+
+        // Wait with a deadline (H-RD-53). The gate starts out signalled and is only re-armed by
+        // BeginFrame, so a render thread that died at startup (MakeCurrent failing) leaves the very
+        // first frame waiting on a gate nobody will ever set. Blocking forever turns a dead render
+        // thread into a frozen editor, which is harder to diagnose than a crash and impossible to
+        // get out of.
+        bool signalled = s_renderFrameDone.Wait(RenderGateTimeoutMs);
         long elapsed = System.Diagnostics.Stopwatch.GetTimestamp() - start;
         LastFrameWaitMs = (float)(elapsed * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+
+        if (!signalled)
+            throw new TimeoutException(
+                $"The render thread did not signal frame end within {RenderGateTimeoutMs} ms. " +
+                "It is most likely dead or blocked - the usual cause is a failed MakeCurrent at " +
+                "startup, after which nothing drains the render queue. Previously this waited " +
+                "forever and froze the editor.");
     }
 
     // On a hybrid machine OpenGL silently picks an adapter for us, and picking the integrated one
@@ -331,7 +353,14 @@ public static unsafe class Graphics
         // drained, so it finishes any pending work (including shutdown resource
         // disposes enqueued during Closing) and then exits cleanly.
         try { s_renderQueue.CompleteAdding(); } catch { }
-        s_renderThread?.Join();
+
+        // Bounded for the same reason as EndFrameAndWait (H-RD-53): a render thread that is alive
+        // but wedged inside a GL call would otherwise make shutdown hang too.
+        if (s_renderThread != null && !s_renderThread.Join(RenderGateTimeoutMs))
+            Debug.LogError(
+                $"The render thread did not exit within {RenderGateTimeoutMs} ms; continuing shutdown " +
+                "without waiting for it.");
+
         try { Window.InternalWindow.GLContext?.MakeCurrent(); } catch { }
         GL.Dispose();
     }
