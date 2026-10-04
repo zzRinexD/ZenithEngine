@@ -366,3 +366,11 @@ coverage/
 
 # Transfer documents between AI sessions (local iteration)
 docs/TRASPASO.md
+
+# External analysis artifacts (never commit)
+_*_list.txt
+_zero*.txt
+_boolonly.txt
+_noassert_list.txt
+_trivial_list.txt
+_smoke_list.txt
