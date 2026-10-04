@@ -27,13 +27,17 @@ public sealed class PhysicsListener : MonoBehaviour
     public override void OnTriggerExit(Rigidbody3D other) => Exits++;
 }
 
-/// <summary>Throws from every per-frame callback, standing in for any user script that misbehaves.</summary>
+/// <summary>Throws from every per-frame callback, standing in for any user script that misbehaves.
+/// <para>The counters increment before throwing, so a test can prove the callback was actually
+/// reached: without them, "did not throw" is also what an unreachable callback looks like.</para></summary>
 public sealed class ThrowingTick : MonoBehaviour
 {
-    public override void Start() => throw new InvalidOperationException("start");
-    public override void Update() => throw new InvalidOperationException("update");
-    public override void LateUpdate() => throw new InvalidOperationException("late");
-    public override void FixedUpdate() => throw new InvalidOperationException("fixed");
+    public int Starts, Updates, LateUpdates, FixedUpdates;
+
+    public override void Start() { Starts++; throw new InvalidOperationException("start"); }
+    public override void Update() { Updates++; throw new InvalidOperationException("update"); }
+    public override void LateUpdate() { LateUpdates++; throw new InvalidOperationException("late"); }
+    public override void FixedUpdate() { FixedUpdates++; throw new InvalidOperationException("fixed"); }
 }
 
 /// <summary>Overrides nothing the per-frame loops dispatch, so it is never registered for ticking.</summary>
@@ -60,6 +64,23 @@ public static class PhysicsLog
     public static readonly List<string> Entries = new();
 }
 
+/// <summary>Records everything logged while it is alive, so a swallowed failure can be told apart
+/// from a reported one. Mirrors the same helper in ProwlActionTests; shared once a third caller needs it.</summary>
+internal sealed class LogCapture : IDisposable
+{
+    private readonly List<string> _messages = [];
+
+    public LogCapture() => Debug.OnLog += Record;
+
+    private void Record(string message, DebugStackTrace? trace, LogSeverity severity) => _messages.Add(message);
+
+    public IReadOnlyList<string> Messages => _messages;
+
+    public bool Logged(string text) => _messages.Exists(m => m.Contains(text, StringComparison.Ordinal));
+
+    public void Dispose() => Debug.OnLog -= Record;
+}
+
 /// <summary>
 /// The parts of <see cref="SceneDispatcher"/> that the merge changed: constant time unregistration, which
 /// moves entries around in the registration array, and physics fan-out, which no longer resolves handlers
@@ -77,19 +98,44 @@ public class SceneDispatcherTests : RuntimeTestBase
     }
 
     /// <summary>
-    /// A component throwing out of a lifecycle callback is a user script bug, not an engine one. It
-    /// must be reported and stepped over, the way the render and gizmo callbacks already are, rather
-    /// than unwinding into the frame loop, which rethrows and takes the editor down.
+/// A component throwing out of a lifecycle callback is a user script bug, not an engine one. It
+/// must be reported and stepped over, the way the render and gizmo callbacks already are, rather
+/// than unwinding into the frame loop, which rethrows and takes the editor down.
+///
+/// <para>Containment is a two-layer net: <c>MonoBehaviour.InternalUpdate</c> catches and logs, and
+/// <c>SceneDispatcher.RunUpdate</c> catches anything that escapes that. So this test asserts the
+/// observable consequences of the contract - reached, reported, frame completed - rather than
+/// which layer happened to catch. Removing the log makes it fail; removing only one catch does not,
+/// because the other layer still holds.</para>
     /// </summary>
     [Fact]
     public void AThrowingCallback_IsContainedRatherThanUnwinding()
     {
         var (scene, go) = NewSceneGo();
-        go.AddComponent<ThrowingTick>();
+        ThrowingTick tick = go.AddComponent<ThrowingTick>();
         scene.Add(go);
+
+        // Three separate claims, all of which the test has to earn. "Nothing threw" on its own is
+        // also what an unreachable callback looks like, so containment alone proves very little:
+        //   1. contained - neither step propagates the component's exception out of the frame loop
+        //   2. reported  - the failure is surfaced, not swallowed silently
+        //   3. attempted - the callback really ran, via the counters it bumps before throwing
+        using var log = new LogCapture();
 
         Update(scene);
         StepPhysics(scene);
+
+        // (3) Reached, and (2) surfaced: the dispatcher logs which callback failed and why.
+        Assert.Equal(1, tick.Updates);
+        Assert.Equal(1, tick.FixedUpdates);
+        Assert.True(log.Logged(nameof(MonoBehaviour.Update)) && log.Logged("update"),
+            $"The throwing Update callback was not reported. Logged: [{string.Join(" | ", log.Messages)}]");
+        Assert.True(log.Logged(nameof(MonoBehaviour.FixedUpdate)) && log.Logged("fixed"),
+            $"The throwing FixedUpdate callback was not reported. Logged: [{string.Join(" | ", log.Messages)}]");
+
+        // (1) Contained: reaching this line at all is the containment claim - Update(scene) and
+        // StepPhysics(scene) are called bare above, so a regression that lets the component's
+        // exception escape fails this test on the call that threw.
     }
 
     /// <summary>The components either side of a throwing one still get their callbacks.</summary>
