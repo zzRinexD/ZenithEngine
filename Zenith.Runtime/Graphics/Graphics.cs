@@ -67,6 +67,27 @@ public static unsafe class Graphics
     private static System.Threading.Thread? s_renderThread;
     private static readonly System.Threading.ManualResetEventSlim s_renderFrameDone = new(true);
 
+    // Set once shutdown has begun, i.e. from the moment Dispose() stops accepting work until
+    // process exit. Submit/SubmitAndWait must treat it exactly like "no device": return the buffer
+    // and drop the GPU work.
+    //
+    // Why this exists (H-RD-52): Dispose() calls CompleteAdding() on the queue, so any Add after it
+    // throws InvalidOperationException. Mesh/Texture/RenderTexture/AudioClip each have a finalizer
+    // that calls Dispose() -> Graphics.Submit, and finalizers run on a background thread AFTER the
+    // user closed the editor. An unhandled exception there terminates the process, so closing the
+    // editor could kill it while the GC was reclaiming a texture. IsHeadless does not cover this:
+    // it is `GL == null`, and Dispose() disposes GL without ever nulling it.
+    private static int s_shuttingDown;
+
+    /// <summary>True once <see cref="Dispose"/> has begun. GPU submissions after this point are
+    /// no-ops instead of throwing.</summary>
+    public static bool IsShuttingDown => System.Threading.Volatile.Read(ref s_shuttingDown) != 0;
+
+    /// <summary>Mark the start of shutdown. Called by <see cref="Dispose"/>; tests set and restore
+    /// it directly because the real path needs a live GL context.</summary>
+    internal static void SetShuttingDown(bool shuttingDown) =>
+        System.Threading.Volatile.Write(ref s_shuttingDown, shuttingDown ? 1 : 0);
+
     private static int s_wantedSwapInterval = -1;
     private static int s_appliedSwapInterval = -1;
 
@@ -85,8 +106,10 @@ public static unsafe class Graphics
         if (cmd._inPool)
             throw new System.InvalidOperationException("CommandBuffer has already been submitted (it's in the pool).");
         // No graphics device: drop GPU work and recycle the buffer instead of queueing it for a
-        // render thread that will never drain it (which would leak the buffer).
-        if (IsHeadless)
+        // render thread that will never drain it (which would leak the buffer). Shutting down counts
+        // as no device: the queue has been completed, so queueing would throw — and a throw from a
+        // finalizer thread takes the process down with it (H-RD-52).
+        if (IsHeadless || IsShuttingDown)
         {
             cmd._ownerReleased = true;
             CommandBufferPool.Return(cmd);
@@ -106,8 +129,9 @@ public static unsafe class Graphics
         if (cmd._inPool)
             throw new System.InvalidOperationException("CommandBuffer has already been submitted (it's in the pool).");
         // No graphics device: nothing executes, so don't block waiting on a render thread. Any
-        // read-back this would have filled keeps its default (zeroed) contents.
-        if (IsHeadless)
+        // read-back this would have filled keeps its default (zeroed) contents. Same reasoning as
+        // Submit for the shutdown case (H-RD-52).
+        if (IsHeadless || IsShuttingDown)
         {
             cmd._ownerReleased = true;
             CommandBufferPool.Return(cmd);
@@ -130,7 +154,7 @@ public static unsafe class Graphics
         s_renderFrameDone.Reset();
     }
 
-    /// <summary>Time the main thread spent blocked in <see cref="EndFrameAndWait"/>
+/// <summary>Time the main thread spent blocked in <see cref="EndFrameAndWait"/>
     /// last frame. High = render thread is bottleneck. Near-zero = main is.</summary>
     public static float LastFrameWaitMs { get; private set; }
 
@@ -299,6 +323,10 @@ public static unsafe class Graphics
 
     public static void Dispose()
     {
+        // Arm the shutdown guard BEFORE completing the queue: from here on, Submit is a no-op, so a
+        // finalizer running later cannot throw on the completed collection (H-RD-52).
+        SetShuttingDown(true);
+
         // CompleteAdding makes the render thread's Take throw once the queue is
         // drained, so it finishes any pending work (including shutdown resource
         // disposes enqueued during Closing) and then exits cleanly.
