@@ -65,6 +65,11 @@ imponer nada. Todo lo nuevo es opcional o es un bug.
 ## Filosofia
 
 - **Bugs: obligatorios.** Se arreglan siempre, no son opcionales.
+- **Prioridad: jugabilidad antes que feel.** Entre dos P0, va primero el que **restaura la
+  jugabilidad basica** y despues el que solo mejora el feel. Si un fix hace el control
+  inutilizable ("no puedo apuntar"), bloquea la evaluacion de todos los demas: nadie puede
+  juzgar si el siguiente mejora el sentido con el control roto debajo. Por eso el Bug 1.0
+  (pitch invertido) va primero aunque sea de la camara, en una fase titulada "personaje".
 - **Features: opcionales.** Cada feature nueva arranca con un toggle
   `[SerializeField] private bool _xxxEnabled`, y sus parametros se ocultan detras de
   `[EnableIf("_xxxEnabled")]` para que el Inspector no se llene de campos muertos.
@@ -154,7 +159,54 @@ Start -> Update -> LateUpdate (`Scene.cs:936-952`).
 
 ---
 
-### Fase 1 - Bugs del personaje (P0)
+### Fase 1 - P0: jugabilidad basica primero, feel despues
+
+**Regla de orden de esta fase:** los fixes que **restauran jugabilidad** van antes que los
+que **mejoran el feel**. El pitch invertido es "no puedo jugar"; el handshake es "juego,
+pero se siente raro". Sin el pitch arreglado el usuario no puede ni apuntar, asi que no
+puede jugar el personaje para evaluar si el handshake mejora nada. Por eso 1.0 va primero.
+
+| # | Fix | De quien es | Esfuerzo |
+|---|---|---|---|
+| 1.0 | Pitch invertido + rango | camara | 5 min |
+| 1.1 | Handshake: la camara publica la base de movimiento | ambos | 30 min |
+| 1.2 | `JumpForce` implementado | personaje | 1h |
+| 1.3 | `RunSpeed` implementado | personaje | 30 min |
+| 1.4 | Rotar con A/D puro | personaje | 30 min |
+| 1.5 | Damping del giro en diagonal | personaje | 1h |
+| 1.6 | `MovementThreshold` documentado | personaje | 5 min |
+
+#### Bug 1.0 - Pitch invertido + su rango invertido
+
+*El unico fix de camara de toda la Fase 1. Va primero por la regla de jugabilidad.*
+
+- **Archivo:** `OrbitFollowCamera.cs:91` y `:25-26`
+- **Por que es lo primero:** con el pitch invertido, mover el raton arriba hace mirar la
+  camara hacia el suelo. Es un mapeo de control roto, no una cuestion de gusto: el jugador
+  no puede apuntar. Todo lo demas de esta fase es tuning, y el tuning no se puede evaluar
+  con un control roto debajo.
+- **Diagnostico:** el signo de la entrada *no* es el bug aislado; el bug es la
+  **combinacion** entrada + convencion de `FromEuler`. En este motor el pitch positivo es
+  mirar **abajo** (la camara del editor lo calcula asi, `EditorCamera.cs:638`:
+  `-MathF.Sin(pitchRad)` en la Y del forward). La linea 91 resta el delta Y, asi que mover
+  el raton **arriba** (delta negativo) **aumenta** el pitch -> la camara mira **abajo**.
+- **Cambio (dos lineas, inseparable):**
+  1. `OrbitFollowCamera.cs:91` - de
+     `_pitchTarget -= Input.MouseDelta.Y * Sensitivity * mult;`
+     a `_pitchTarget += Input.MouseDelta.Y * Sensitivity * mult;`
+  2. `OrbitFollowCamera.cs:25-26` - invertir tambien el clamp y sus defaults, si no el
+     rango queda al reves:
+     - `MinPitch = -18f` -> `MinPitch = -36f`
+     - `MaxPitch = 36f` -> `MaxPitch = 18f`
+- **Por que el punto 2 es obligatorio:** hoy el rango es "18 arriba / 36 abajo"
+  (asimetrico, y la asimetria confirma que los defaults se escribieron bajo la convencion
+  "positivo = abajo"). Al invertir el signo, ese mismo rango pasaria a ser "36 arriba /
+  18 abajo": un cambio de feel no pedido, colado dentro de un fix de bug.
+- **Verificacion:** raton arriba -> la camara **sube** y se para en 18 grados sobre el
+  horizonte; raton abajo -> baja hasta 36. Antes: lo contrario en ambos extremos. Y con el
+  Bug 1.1 ya aplicado, W sigue moviendo en la direccion de la pantalla.
+- **Esfuerzo:** 5 min. **Es el fix mas barato del plan y el que mas bloquea.**
+- **Commit:** `Fix: Invert pitch sign and pitch range in OrbitFollowCamera.`
 
 #### Bug 1.1 - Handshake: la camara publica la base de movimiento
 
@@ -241,6 +293,7 @@ float mag = Float3.Length(moveDir);
   ~3 grados de diferencia y ~15 respectivamente. Ademas: girar la camara mientras se
   camina no debe hacer que el personaje derive de lado.
 - **Automatizable:** si, con `FakeInputHandler.SetMouseDelta` + yaw fijo.
+- **Esfuerzo:** 30 min.
 - **Commit:** `Fix: Publish movement basis from camera; use it in character movement.`
 
 #### Bug 1.2 - `JumpForce` implementado (hoy el personaje no salta)
@@ -280,6 +333,7 @@ if (wasGrounded && Input.GetKeyDown(KeyCode.Space))
   velocidad vertical sigue siendo positiva hasta que la gravedad la gane. Se acepta: es
   imperceptible y un Fix tiene su propio coste.
 - **Automatizable:** si, con `FakeInputHandler.PressKey(KeyCode.Space)`.
+- **Esfuerzo:** 1h.
 - **Commit:** `Feat: Implement jump using JumpForce.`
 
 #### Bug 1.3 - `RunSpeed` implementado (hoy Shift no hace nada)
@@ -306,6 +360,7 @@ targetVelocity = moveDir * (wantsRun ? RunSpeed : WalkSpeed);
 - **Verificacion:** Shift -> el personaje acelera hasta 8. Sin Shift -> hasta 5. Mezclar
   Shift con una direccion durante un frame no debe dar un salto de velocidad.
 - **Automatizable:** si, con `FakeInputHandler.PressKey(KeyCode.LeftShift)`.
+- **Esfuerzo:** 30 min.
 - **Commit:** `Feat: Implement run using RunSpeed.`
 
 #### Bug 1.4 - El personaje no rota con A/D puro (moonwalk lateral)
@@ -334,6 +389,7 @@ else
   ahi. D puro -> a la derecha. S puro -> el modelo **no** rota (se mantiene). W -> adelanta
   como antes.
 - **Automatizable:** si.
+- **Esfuerzo:** 30 min.
 - **Commit:** `Fix: Rotate character with A/D when no vertical input.`
 
 #### Bug 1.5 - Giro de 45 grados al correr en diagonal
@@ -376,6 +432,8 @@ model.Rotation = Quaternion.Slerp(model.Rotation, targetRotation, tTurn);
 > commit**, no tres: partir una linea en tres commits para cuadrar con una lista de
 > auditoria no aporta nada y hace el historial mas dificil de leer.
 >
+- **Esfuerzo:** 1h.
+>
 > **Commit:** `Fix: Make character rotation framerate-independent and clamp slerp t.`
 
 #### Bug 1.6 - `MovementThreshold` es decorativo, y es una trampa latente
@@ -401,46 +459,22 @@ model.Rotation = Quaternion.Slerp(model.Rotation, targetRotation, tTurn);
     signifique algo. Es una feature mayor, fuera de alcance.
 - **Verificacion:** el personaje no se mueve con `MovementThreshold = 0` ni con
   `MovementThreshold = 10` (con `= 10` tampoco se mueve hoy, y el tooltip lo dice).
+- **Esfuerzo:** 5 min.
 - **Commit:** `Docs: Document that MovementThreshold is inert with keyboard input.`
 
-**Esfuerzo Fase 1: ~3h 45 min** (6 items, todos pequenos en codigo; el peso es
-verificar que el movimiento no se rompió en ningun commit intermedio).
+**Esfuerzo Fase 1: ~3h 40 min** (7 items; el codigo son ~30 lineas en total. El peso real
+es verificar que el movimiento no se rompio en ningun commit intermedio - en especial
+despues de 1.0, que cambia la convencion de pitch y toca la misma linea de input que
+usan el resto de fixes).
 
 ---
 
-### Fase 2 - Pitch invertido de la camara (P0)
+### Fase 2 - Bugs de camara restantes
 
-*Sigue siendo P0, pero va despues del handshake: con el pitch arreglado, el personaje
-responde bien; con el pitch roto, el movimiento se siente mal aunque la base sea correcta.
-Arreglar la base primero hace que el sintoma restante sea atribuible al pitch.*
+*El pitch ya se resolvio en el Bug 1.0, por la regla de jugabilidad. Aqui quedan los dos
+que no bloquean jugar: ninguno impide apuntar ni mover al personaje.*
 
-#### Bug 2.1 - Pitch invertido + su rango invertido
-
-- **Archivo:** `OrbitFollowCamera.cs:91` y `:25-26`
-- **Diagnostico:** el signo de la entrada *no* es el bug aislado; el bug es la
-  **combinacion** entrada + convencion de `FromEuler`. En este motor el pitch positivo es
-  mirar **abajo** (la camara del editor lo calcula asi, `EditorCamera.cs:638`:
-  `-MathF.Sin(pitchRad)` en la Y del forward). La linea 91 resta el delta Y, asi que mover
-  el raton **arriba** (delta negativo) **aumenta** el pitch -> la camara mira **abajo**.
-  Invertido.
-- **Cambio (dos lineas, inseparable):**
-  1. `OrbitFollowCamera.cs:91` - de
-     `_pitchTarget -= Input.MouseDelta.Y * Sensitivity * mult;`
-     a `_pitchTarget += Input.MouseDelta.Y * Sensitivity * mult;`
-  2. `OrbitFollowCamera.cs:25-26` - invertir tambien el clamp y sus defaults, si no el
-     rango queda al reves:
-     - `MinPitch = -18f` -> `MinPitch = -36f`
-     - `MaxPitch = 36f` -> `MaxPitch = 18f`
-- **Por que el punto 2 es obligatorio:** hoy el rango es "18 arriba / 36 abajo"
-  (asimetrico, y la asimetria confirma que los defaults se escribieron bajo la convencion
-  "positivo = abajo"). Al invertir el signo, ese mismo rango pasaria a ser "36 arriba /
-  18 abajo": un cambio de feel no pedido, colado dentro de un fix de bug.
-- **Verificacion:** raton arriba -> la camara **sube** y se para en 18 grados sobre el
-  horizonte; raton abajo -> baja hasta 36. Antes: lo contrario en ambos extremos. Y con el
-  Bug 1.1 ya aplicado, W sigue moviendo en la direccion de la pantalla.
-- **Commit:** `Fix: Invert pitch sign and pitch range in OrbitFollowCamera.`
-
-#### Bug 2.2 - Comentarios mentirosos en `DefaultInputHandler`
+#### Bug 2.1 - Comentarios mentirosos en `DefaultInputHandler`
 
 - **Archivo:** `Zenith.Runtime/InputManagement/DefaultInputHandler.cs:68` y `:382`
 - **Cambio:** no hay inversion de Y en ninguno de los dos sitios.
@@ -448,7 +482,7 @@ Arreglar la base primero hace que el sintoma restante sea atribuible al pitch.*
     -> borrar el comentario.
   - `:382` - `return new Float2(thumbstick.X, thumbstick.Y); // We flip y to make UP on the stick positive`
     -> borrar el comentario.
-- **Por que importa mas de lo que parece:** el Bug 2.1 existe precisamente porque alguien
+- **Por que importa mas de lo que parece:** el Bug 1.0 existe precisamente porque alguien
   confio en la convencion "mouse up = positivo" que estos comentarios prometen. Un
   comentario que promete una normalizacion que no ocurre es la causa raiz de que el proximo
   agente vuelva a invertir el pitch.
@@ -458,7 +492,7 @@ Arreglar la base primero hace que el sintoma restante sea atribuible al pitch.*
   comportamiento del input, fuera de alcance. Se elige borrar el comentario.
 - **Commit:** `Docs: Remove comments claiming Y inversion that DefaultInputHandler does not do.`
 
-#### Bug 2.3 - LookAt inconsistente con el pivote
+#### Bug 2.2 - LookAt inconsistente con el pivote
 
 - **Archivo:** `OrbitFollowCamera.cs:146-149`
 - **Problema:** la posicion de la camara se deriva de `_smoothedTargetPos` (pivote
@@ -481,7 +515,7 @@ Arreglar la base primero hace que el sintoma restante sea atribuible al pitch.*
   en el encuadre.
 - **Commit:** `Fix: Use smoothed pivot for OrbitFollowCamera lookAt.`
 
-**Esfuerzo Fase 2: ~45 min.**
+**Esfuerzo Fase 2: ~30 min.**
 
 ---
 
@@ -647,7 +681,7 @@ con `[EnableIf("_xxxEnabled")]`. Se escriben y se commitean **una por una**.)*
       if (Maths.Abs(stick.X) > _gamepadDeadzone || Maths.Abs(stick.Y) > _gamepadDeadzone)
       {
           _yawTarget += stick.X * _gamepadSensitivity * dt;
-          // Mismo signo que el raton tras el Bug 2.1: +Y del stick = arriba = pitch +
+          // Mismo signo que el raton tras el Bug 1.0: +Y del stick = arriba = pitch +
           _pitchTarget += stick.Y * _gamepadSensitivity * dt;
       }
   }
@@ -674,12 +708,12 @@ con `[EnableIf("_xxxEnabled")]`. Se escriben y se commitean **una por una**.)*
 - **Archivo:** `OrbitFollowCamera.cs`
 - **Campo:**
   - `[SerializeField, Tooltip("Invierte el eje vertical. Para quien juegue con control invertido.")] private bool _invertY = false;`
-- **Logica** (una linea, en `:91` tras el fix del Bug 2.1):
+- **Logica** (una linea, en `:91` tras el fix del Bug 1.0):
   ```csharp
   float pitchSign = _invertY ? -1f : 1f;
   _pitchTarget += pitchSign * Input.MouseDelta.Y * Sensitivity * mult;
   ```
-- **Default `false`:** el Bug 2.1 deja el comportamiento correcto.
+- **Default `false`:** el Bug 1.0 deja el comportamiento correcto.
 - **Verificacion:** con el toggle ON, raton arriba -> camara baja. OFF -> sube.
 - **Commit:** `Feat: Add InvertY option to OrbitFollowCamera.`
 
@@ -782,10 +816,10 @@ Todos contra `FakeInputHandler` + `scene.Update()` (que bombea `LateUpdate`,
 - [ ] `ThirdPersonCharacterMovementTests.SlerpT_Clamped_WhenTurnSpeedNegative`
 - [ ] `ThirdPersonCharacterMovementTests.MovementBasis_SameAtCameraDistance1And6`
 - [ ] `ThirdPersonCharacterMovementTests.DegenerateBasis_DoesNotProduceNaN`
-- [ ] `OrbitFollowCameraTests.FlatForward_MatchesYawForward_NotLookAtDirection`
-- [ ] `OrbitFollowCameraTests.FlatForward_OrthogonalToFlatRight`
 - [ ] `OrbitFollowCameraTests.PitchDelta_MouseUp_IncreasesPitch`
 - [ ] `OrbitFollowCameraTests.Pitch_ClampedToMinMax`
+- [ ] `OrbitFollowCameraTests.FlatForward_MatchesYawForward_NotLookAtDirection`
+- [ ] `OrbitFollowCameraTests.FlatForward_OrthogonalToFlatRight`
 - [ ] `OrbitFollowCameraTests.LookAt_UsesSmoothedPivotNotRawTarget`
 - [ ] `OrbitFollowCameraTests.MissingTarget_DoesNotThrow` (el `Camera.Target` nulo ya no
       aparece en el personaje, pero la guarda de la camara sigue viva)
@@ -859,22 +893,27 @@ Lo que no se puede testear, porque no hay assert posible para "esto se siente bi
 | Fase | Contenido | Esfuerzo |
 |---|---|---|
 | 0 | Preparacion (rama, video, linea base de tests) | 20 min |
-| 1 | 6 bugs del personaje (handshake, salto, run, A/D, 45 grados, threshold) | 3h 45 min |
-| 2 | 3 bugs de la camara (pitch, comentarios, lookAt) | 45 min |
+| 1 | 7 P0 (pitch, handshake, salto, run, A/D, 45 grados, threshold) | 3h 40 min |
+| 2 | 2 bugs de la camara (comentarios mentirosos, lookAt) | 30 min |
 | 3 | Tooltips, rangos y desambiguacion de nombres | 1h 15 min |
 | 4 | 6 features opcionales (con toggle) | 4h 30 min |
 | 5 | 16 tests nuevos + verificacion manual | 2h 45 min |
 | 6 | Build, tests, video, merge | 40 min |
-| | **Total** | **~14h 20 min** |
+| | **Total** | **~14h 5 min** |
 
-Es mas que las ~11h estimadas, y el motivo es concreto: la Fase 1 son 6 bugs en vez de 1,
-el salto y el run son features nuevas disfrazadas de bug (no es un one-liner, es
-implementar la mecanica y decidir donde insertarla sin que `SnapToGround` lo cancele), y la
-Fase 5 crece de 13 a 16 tests porque el handshake y el salto son comprobables y hay que
-cubrir el caso degenerado (base cero -> `NaN`).
+Es mas que las ~11h estimadas, y el motivo es concreto: la Fase 1 son 7 P0 en vez de 1, el
+salto y el run son features nuevas disfrazadas de bug (no es un one-liner, es implementar
+la mecanica y decidir donde insertarla sin que `SnapToGround` lo cancele), y la Fase 5
+crece de 13 a 16 tests porque el handshake y el salto son comprobables y hay que cubrir el
+caso degenerado (base cero -> `NaN`).
 
 El trabajo de codigo son ~4h. Las 10h restantes son verificacion, que es donde se decide
 si esto ha servido de algo.
+
+**Nota sobre el orden de la Fase 1:** el Bug 1.0 (pitch) cuesta 5 minutos y va primero. Es
+el unico fix que estaba bloqueando - sin el, el jugador no puede apuntar y todo lo demas es
+imposible de evaluar. Si hay que recortar tiempo, se recorta de la Fase 4 (features
+opcionales), nunca de la Fase 1.
 
 ---
 
@@ -893,16 +932,18 @@ si esto ha servido de algo.
 | R9 | **Defaults nuevos rompen proyectos existentes.** Poner `_collisionEnabled = true` cambia el comportamiento de cualquier escena que tuviera la camara atravesando paredes. | Es el default correcto (arregla un agujero), pero hace falta el video de la linea base para mostrar la diferencia. |
 | R10 | **Division por cero en la normalizacion** si el framebuffer mide 0 (headless, tests) -> `NaN` en `_pitchTarget` y la camara se va para siempre. | Guarda `if (height > 0)` obligatoria. |
 | R11 | **El feel no se puede automatizar.** Es posible pasar los 16 tests y que el personaje siga sintiendose mal. | La verificacion 5.4 es obligatoria y la decide el usuario. El video antes/despues es la evidencia. |
-| R12 | **El giro a 45 grados con damping exponencial puede sentirse "tardío"** con `TurnSpeed = 12`. Antes era lineal (mas brusco). | `TurnSpeed` esta expuesto y es el primer candidato a subir en el tuning. Se comprueba en 5.4. |
-| R13 | **Arreglar el movimiento puede tapar el pitch invertido, o al reves.** Con el pitch roto, el personaje "va mal" aunque la base sea correcta. | El handshake va **primero** (Fase 1) y el pitch **despues** (Fase 2), para que al llegar al Bug 2.1 el sintoma restante sea atribuible al pitch y no a otra cosa. |
+| R12 | **El giro a 45 grados con damping exponencial puede sentirse "tardio"** con `TurnSpeed = 12`. Antes era lineal (mas brusco). | `TurnSpeed` esta expuesto y es el primer candidato a subir en el tuning. Se comprueba en 5.4. |
+| R13 | **Un fix puede tapar a otro y falsear la evaluacion.** Con el pitch roto, el personaje "va mal" aunque la base de movimiento sea correcta, y viceversa. | Ordenarlos por la regla de jugabilidad: el pitch (Bug 1.0) es "no puedo jugar" y el handshake (1.1) es "juego pero se siente raro". Cada uno se verifica por separado, en su commit, antes de pasar al siguiente. |
 
 ---
 
 ## Criterios de "terminado"
 
-- [ ] Los 6 bugs del personaje arreglados, cada uno con su commit.
-- [ ] Los 3 bugs de la camara arreglados, cada uno con su commit.
-- [ ] El Bug 2.1 incluye el cambio de rango de pitch, no solo el signo.
+- [ ] Los 7 P0 de la Fase 1 arreglados, cada uno con su commit, **en el orden del plan**
+      (pitch primero).
+- [ ] Los 2 bugs de la Fase 2 arreglados, cada uno con su commit.
+- [ ] El Bug 1.0 incluye el cambio de rango de pitch, no solo el signo.
+- [ ] El Bug 1.0 se puede jugar: raton arriba -> la camara sube.
 - [ ] **El personaje puede saltar y puede correr.** `JumpForce` y `RunSpeed` hacen algo.
 - [ ] **El personaje no hace moonwalk lateral** con A/D puro.
 - [ ] La base de movimiento viene de la camara via `FlatForward` / `FlatRight`, no de
