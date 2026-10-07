@@ -101,7 +101,7 @@ public class ThirdPersonCharacterMovement : MonoBehaviour
         if (mag > MovementThreshold)
         {
             moveDir = Float3.Normalize(moveDir);
-            bool wantsRun = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            bool wantsRun = Input.IsShiftPressed;
             targetVelocity = moveDir * (wantsRun ? RunSpeed : WalkSpeed);
         }
 
