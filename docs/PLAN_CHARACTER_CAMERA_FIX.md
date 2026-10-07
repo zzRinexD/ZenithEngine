@@ -175,6 +175,8 @@ puede jugar el personaje para evaluar si el handshake mejora nada. Por eso 1.0 v
 | 1.4 | Rotar con A/D puro | personaje | 30 min |
 | 1.5 | Damping del giro en diagonal | personaje | 1h |
 | 1.6 | `MovementThreshold` documentado | personaje | 5 min |
+| 1.7 | `accelRate` binario: frena con la tasa equivocada | personaje | 15 min |
+| 1.7 | `accelRate` binario: frena con la tasa equivocada | personaje | 15 min |
 
 #### Bug 1.0 - Pitch invertido + su rango invertido
 
@@ -449,6 +451,16 @@ model.Rotation = Quaternion.Slerp(model.Rotation, targetRotation, tTurn);
   desde teclado (si hay `inputY > 0.01` hay al menos un `GetKey` pulsado, o sea
   `mag >= 1`), asi que no es un bug activo. **Pero se vuelve alcanzable en cuanto entre
   input analogico**, que es justo lo que trae el gamepad de la Fase 4.
+- **Comportamiento real del caso degenerado (medido contra Prowl.Vector 3.5.0):**
+  - `Float3.Normalize(Float3.Zero)` devuelve `(0, 0, 0)`, no `NaN`. El `Normalize` de este
+    motor es seguro con el vector cero.
+  - `Quaternion.LookRotation((0,0,0), Float3.UnitY)` devuelve `(0, 0, 0, 0.7071)` con
+    Euler `(0, 0, 0)`. Tambien es finito: **no crashea ni produce `NaN`.**
+  - El sintoma real, por tanto, no es una excepcion: es que el modelo **se orientaria de
+    golpe a la identidad** (mira al eje del mundo) durante un frame. Un glitch visible, no
+    una corrupcion.
+  - Por eso **subir el `Normalize` fuera del `if` no arregla nada**: seguiria llegando un
+    vector cero a `LookRotation`. El guard tiene que ir donde se usa, no donde se calcula.
 - **Cambio (preventivo, 1 linea):** el Bug 1.5 ya normaliza `lookDir` antes de
   `LookRotation`, lo que neutraliza el Problema B. Para el A:
   - Opcion 1 (la elegida): **dejar `MovementThreshold` como esta y documentarlo** en el
@@ -462,7 +474,76 @@ model.Rotation = Quaternion.Slerp(model.Rotation, targetRotation, tTurn);
 - **Esfuerzo:** 5 min.
 - **Commit:** `Docs: Document that MovementThreshold is inert with keyboard input.`
 
-**Esfuerzo Fase 1: ~3h 40 min** (7 items; el codigo son ~30 lineas en total. El peso real
+> **Sobre el "Bug C" de la auditoria manual (offset de `Facing` que se duplica).** Se
+> investigo y **no es un bug de codigo**. Tres comprobaciones:
+>
+> 1. `lookDir` siempre tiene `Y = 0`, porque `flatF` y `flatR` salen de la base de la
+>    camara con la Y forzada a 0. Por tanto `Quaternion.LookRotation` siempre produce
+>    **pitch 0** (medido: `LookRotation(diag45, Up).EulerAngles = (-0; 45; 0)`).
+> 2. Con pitch 0, el Y local del modelo **coincide con el Y del mundo**, asi que
+>    post-multiplicar por `FromEuler(0, offsetDeg, 0)` aplica el offset alrededor del Y del
+>    mundo, que es lo correcto. Medido: 45 grados + 90 = 135, como debe ser.
+> 3. `Transform.Rotation` es **espacio mundo** (se compone subiendo por la cadena de
+>    padres, `Transform.cs:56-82`, y el setter divide por el padre al escribir). El
+>    `Slerp` es un giro hacia objetivo estandar en mundo, no acumula nada.
+>
+> **Aplicar el offset antes del `LookRotation` seria un no-op.** El riesgo real es de
+> **autoria**: `ModelRoot` con rotacion base en el editor **y** `Facing` puesto son el
+> mismo ajuste por dos caminos a la vez, y los offsets se suman. Eso se resuelve
+> documentandolo en los tooltips (Feature 3.1), no reordenando la multiplicacion.
+
+#### Bug 1.7 - La eleccion de `accelRate` es binaria y frena mal
+
+*Este es el bug real que hay detras del "Bug A" de la auditoria manual. El lerp por eje no
+es un bug (ver nota al final de este bug); lo que si lo es es la eleccion de `accelRate`.*
+
+- **Archivo:** `ThirdPersonCharacterMovement.cs:95`
+- **Codigo actual:**
+  ```csharp
+  float accelRate = targetVelocity == Float3.Zero ? Deceleration : Acceleration;
+  ```
+- **Problema 1 (el de RunSpeed, y el que se nota):** el criterio mira **solo si el
+  objetivo es cero**. No mira si estamos acelerando o frenando. Consecuencia concreta:
+  soltar Shift mientras se sigue con W baja el objetivo de `RunSpeed = 8` a
+  `WalkSpeed = 5`, asi que `targetVelocity != Zero` y **`accelRate = Acceleration = 25`**.
+  El personaje frena de 8 a 5 con la tasa de *aceleracion*. En cambio, si sueltas W del todo,
+  `targetVelocity == Zero` y frena con `Deceleration = 30`. **La misma accion (frenar) usa
+  dos tasas distintas segun cuanto brakes**, y no hay ningun campo para ajustarlo.
+- **Problema 2 (giro de direccion):** girar de +X a -X usa `Acceleration`, no una tasa de
+  giro mayor. En la practica casi todos los feel buenos dan un "turn rate" mas alto que la
+  aceleracion desde el reposo, porque cambiar de direccion tiene que leerse rapido.
+- **Cambio** - comparar la magnitud actual contra la magnitud objetivo:
+  ```csharp
+  // Elegir la tasa por si estamos acelerando o frenando, no por si el objetivo es
+  // cero. Antes, soltar Shift (8 -> 5) frenaba con Acceleration, igual que arrancar
+  // desde el reposo: dos acciones distintas con la misma tasa.
+  float currentSpeed = Float3.Length(_currentHorizontalVelocity);
+  float targetSpeed = Float3.Length(targetVelocity);
+  float accelRate = targetSpeed < currentSpeed ? Deceleration : Acceleration;
+  ```
+- **Por que `currentSpeed`/`targetSpeed` y no comparar vectores:**`_currentHorizontalVelocity`
+  y `targetVelocity` estan **colineales** salvo en el frame en que cambia la direccion del
+  input, donde la componente lateral desciende de forma suave. Comparar magnitudes captura
+  "freno" correctamente sin que un giro brusco dispare `Deceleration` por un error de
+  magnitud.
+- **Nota sobre el lerp por eje (NO es un bug):** el codigo escribe el lerp componente a
+  componente con `Maths.Lerp`, y se propuso cambiarlo a un unico `Float3.Lerp(...)`.
+  Verificado contra Prowl.Vector 3.5.0: **`Float3.Lerp` no existe** (0 overloads; lo unico
+  parecido es `Float3.MoveTowards(Float3, Float3, float)`), asi que ese cambio **no
+  compila**. Y aunque existiera, seria un refactor sin cambio de comportamiento: el lerp
+  componente a componente con el mismo `t` es matematicamente identico a `a + (b-a)*t`
+  (comprobado: ambos dan `(1.9, 2.9, 4.2)`). Ademas va contra la convencion del repo, que
+  usa `Maths.Lerp` por componente en 12 sitios y `Float3.Lerp` en 0.
+- **Por que "un modo gradual" no va aqui:** un knob extra para la tasa de giro es una
+  **feature**, no un fix, y la filosofia del proyecto prohibe imponerla. Va como feature
+  opcional en la Fase 4 (Feature 4.7).
+- **Verificacion:** Sprint a 8, soltar Shift sin soltar W -> el personaje frena de 8 a 5.
+  Antes: esa frenada usaba `Acceleration` (25). Automatizable: `PressKey(LeftShift)` +
+  `ReleaseKey(LeftShift)` y medir la velocidad por frame.
+- **Esfuerzo:** 15 min.
+- **Commit:** `Fix: Choose acceleration rate by whether slowing down, not by target being zero.`
+
+**Esfuerzo Fase 1: ~3h 55 min** (8 items; el codigo son ~30 lineas en total. El peso real
 es verificar que el movimiento no se rompio en ningun commit intermedio - en especial
 despues de 1.0, que cambia la convencion de pitch y toca la misma linea de input que
 usan el resto de fixes).
@@ -541,8 +622,8 @@ falta es que el usuario sepa que son. Nada de esto cambia el comportamiento.)*
   | `Acceleration` | 22 | "Rapidez con la que el personaje alcanza la velocidad objetivo." |
   | `Deceleration` | 23 | "Rapidez con la que el personaje frena. Mayor = frena mas rapido." |
   | `TurnSpeed` | 28 | "Velocidad de giro del modelo hacia la direccion de movimiento. Mayor = gira mas rapido." |
-  | `ModelRoot` | 31 | "Transform del modelo que rota. Si esta vacio, rota el GameObject entero." |
-  | `Facing` | 32 | "Orientacion del modelo respecto a su forward. Ajustalo si el modelo mira por defecto por detras." |
+  | `ModelRoot` | 31 | "Transform del modelo que rota. Si esta vacio, rota el GameObject entero. **No le pongas rotacion en el editor si vas a usar `Facing`**: los dos mecanismos se suman y la orientacion sale mal." |
+  | `Facing` | 32 | "Correccion de orientacion del modelo respecto a su forward. Usa esto **o** la rotacion base del `ModelRoot`, nunca las dos: son el mismo ajuste por dos caminos." |
   | `StrafeMode` | 35 | "Si esta activo, el personaje siempre mira hacia donde mira la camara en vez de hacia donde se mueve." |
   | `Gravity` | 41 | "Aceleracion hacia abajo, en unidades/s2. Negativo." |
 
@@ -795,7 +876,42 @@ con `[EnableIf("_xxxEnabled")]`. Se escriben y se commitean **una por una**.)*
   barrido. Correr normal -> el snap no se dispara nunca.
 - **Commit:** `Feat: Add snap-on-teleport option to OrbitFollowCamera.`
 
-**Esfuerzo Fase 4: ~4h 30 min** (6 features, ~45 min cada una).
+#### Feature 4.7 - Tasa de giro separada de la aceleracion (opcional)
+
+*Viene del "modo gradual" pedido en la auditoria manual. Es una feature, no un fix: por la
+filosofia del proyecto no se impone, asi que nace apagada.*
+
+- **Archivo:** `ThirdPersonCharacterMovement.cs` (tras el Bug 1.7)
+- **Problema que resuelve:** el Bug 1.7 decide entre `Acceleration` y `Deceleration` segun
+  si frena o acelera. No hay tercera opcion: **cambiar de direccion usa la misma tasa que
+  arrancar desde el reposo.** En la practica casi todos los feel buenos dan un "turn rate"
+  mas alto para el giro, porque cambiar de sentido tiene que leerse rapido o se siente
+  como patinar.
+- **Campos:**
+  - `[SerializeField, Tooltip("Permite una tasa de giro distinta de la aceleracion al cambiar de direccion.")] private bool _turnRateEnabled = false;`
+  - `[SerializeField, Tooltip("Tasa usada al cambiar de sentido. Mayor = gira mas rapido."), EnableIf("_turnRateEnabled")] private float _turnRate = 20f;`
+- **Default `false`:** sin este flag el componente se comporta exactamente como ahora, con
+  el arreglo del Bug 1.7. Encenderlo cambia el feel, asi que es decision del usuario.
+- **Logica** (encima de la eleccion de `accelRate` del Bug 1.7):
+  ```csharp
+  if (_turnRateEnabled)
+  {
+      // Solo cuando hay un cambio de sentido real: mismo signo de componente
+      // dominante, no el mismo eje.
+      if (currentSpeed > 0.01f && Float3.Dot(_currentHorizontalVelocity, targetVelocity) < 0f)
+          accelRate = _turnRate;
+  }
+  ```
+  - **Por que el `Dot < 0` y no "cambió el eje":** un input en diagonal cambia los dos ejes
+    sin ser un giro de verdad (ir de adelante-derecha a adelante-izquierda no es dar media
+    vuelta). El `Dot` negativo solo se dispara cuando el objetivo apunta de verdad al lado
+    contrario.
+- **Verificacion:** con el toggle OFF, girar 180 grados se comporta como ahora. Con ON, el
+  personaje llega antes a mirar al otro lado. Y avanzar en diagonal NO dispara la tasa de
+  giro.
+- **Commit:** `Feat: Add optional separate turn rate for direction changes.`
+
+**Esfuerzo Fase 4: ~5h 15 min** (7 features, ~45 min cada una).
 
 ---
 
@@ -816,6 +932,8 @@ Todos contra `FakeInputHandler` + `scene.Update()` (que bombea `LateUpdate`,
 - [ ] `ThirdPersonCharacterMovementTests.SlerpT_Clamped_WhenTurnSpeedNegative`
 - [ ] `ThirdPersonCharacterMovementTests.MovementBasis_SameAtCameraDistance1And6`
 - [ ] `ThirdPersonCharacterMovementTests.DegenerateBasis_DoesNotProduceNaN`
+- [ ] `ThirdPersonCharacterMovementTests.RunSpeed_ReleasedWhileHoldingW_UsesDeceleration`
+- [ ] `ThirdPersonCharacterMovementTests.TurnRateDisabled_ByDefault_BehaviorUnchanged`
 - [ ] `OrbitFollowCameraTests.PitchDelta_MouseUp_IncreasesPitch`
 - [ ] `OrbitFollowCameraTests.Pitch_ClampedToMinMax`
 - [ ] `OrbitFollowCameraTests.FlatForward_MatchesYawForward_NotLookAtDirection`
@@ -868,7 +986,7 @@ Lo que no se puede testear, porque no hay assert posible para "esto se siente bi
 - [ ] `_collisionPullInSpeed = 20` / `_collisionPushOutSpeed = 5`: el tiron al pegarse a
       una pared se nota demasiado? -> __________
 
-**Esfuerzo Fase 5: ~2h 45 min** (16 tests nuevos ~1h 30, verificacion manual ~1h 15).
+**Esfuerzo Fase 5: ~3h** (18 tests nuevos ~1h 40, verificacion manual ~1h 20).
 
 ---
 
@@ -876,7 +994,7 @@ Lo que no se puede testear, porque no hay assert posible para "esto se siente bi
 
 - [ ] `dotnet build` sin warnings nuevos
 - [ ] `dotnet test` verde y **el recuento no ha bajado** respecto a la linea base de la
-      Fase 0 (los 16 tests nuevos suben el total; si baja, algo se rompio)
+      Fase 0 (los 18 tests nuevos suben el total; si baja, algo se rompio)
 - [ ] Grabar el video "despues" y ponerlo lado a lado con el de la Fase 0
 - [ ] Actualizar este documento: marcar las casillas, anotar los defaults finales que haya
       elegido el usuario
@@ -893,22 +1011,22 @@ Lo que no se puede testear, porque no hay assert posible para "esto se siente bi
 | Fase | Contenido | Esfuerzo |
 |---|---|---|
 | 0 | Preparacion (rama, video, linea base de tests) | 20 min |
-| 1 | 7 P0 (pitch, handshake, salto, run, A/D, 45 grados, threshold) | 3h 40 min |
+| 1 | 8 P0 (pitch, handshake, salto, run, A/D, 45 grados, threshold, accelRate) | 3h 55 min |
 | 2 | 2 bugs de la camara (comentarios mentirosos, lookAt) | 30 min |
 | 3 | Tooltips, rangos y desambiguacion de nombres | 1h 15 min |
-| 4 | 6 features opcionales (con toggle) | 4h 30 min |
-| 5 | 16 tests nuevos + verificacion manual | 2h 45 min |
+| 4 | 7 features opcionales (con toggle) | 5h 15 min |
+| 5 | 18 tests nuevos + verificacion manual | 3h |
 | 6 | Build, tests, video, merge | 40 min |
-| | **Total** | **~14h 5 min** |
+| | **Total** | **~14h 45 min** |
 
 Es mas que las ~11h estimadas, y el motivo es concreto: la Fase 1 son 7 P0 en vez de 1, el
 salto y el run son features nuevas disfrazadas de bug (no es un one-liner, es implementar
 la mecanica y decidir donde insertarla sin que `SnapToGround` lo cancele), y la Fase 5
-crece de 13 a 16 tests porque el handshake y el salto son comprobables y hay que cubrir el
-caso degenerado (base cero -> `NaN`).
+crece de 13 a 18 tests porque el handshake, el salto y la frenada son comprobables y hay que
+cubrir el caso degenerado (base cero -> orientacion identidad).
 
-El trabajo de codigo son ~4h. Las 10h restantes son verificacion, que es donde se decide
-si esto ha servido de algo.
+El trabajo de codigo son ~4h 30 min. Las 10h 15 restantes son verificacion, que es donde
+se decide si esto ha servido de algo.
 
 **Nota sobre el orden de la Fase 1:** el Bug 1.0 (pitch) cuesta 5 minutos y va primero. Es
 el unico fix que estaba bloqueando - sin el, el jugador no puede apuntar y todo lo demas es
@@ -931,17 +1049,21 @@ opcionales), nunca de la Fase 1.
 | R8 | **`EnableIf` necesita el nombre exacto del campo** (`"_xxxEnabled"`). Un typo no da error de compilacion: simplemente no greyea nada. | Revisar visualmente el Inspector con cada toggle en OFF despues de anadirlo, no confiar en el build. |
 | R9 | **Defaults nuevos rompen proyectos existentes.** Poner `_collisionEnabled = true` cambia el comportamiento de cualquier escena que tuviera la camara atravesando paredes. | Es el default correcto (arregla un agujero), pero hace falta el video de la linea base para mostrar la diferencia. |
 | R10 | **Division por cero en la normalizacion** si el framebuffer mide 0 (headless, tests) -> `NaN` en `_pitchTarget` y la camara se va para siempre. | Guarda `if (height > 0)` obligatoria. |
-| R11 | **El feel no se puede automatizar.** Es posible pasar los 16 tests y que el personaje siga sintiendose mal. | La verificacion 5.4 es obligatoria y la decide el usuario. El video antes/despues es la evidencia. |
+| R11 | **El feel no se puede automatizar.** Es posible pasar los 18 tests y que el personaje siga sintiendose mal. | La verificacion 5.4 es obligatoria y la decide el usuario. El video antes/despues es la evidencia. |
 | R12 | **El giro a 45 grados con damping exponencial puede sentirse "tardio"** con `TurnSpeed = 12`. Antes era lineal (mas brusco). | `TurnSpeed` esta expuesto y es el primer candidato a subir en el tuning. Se comprueba en 5.4. |
 | R13 | **Un fix puede tapar a otro y falsear la evaluacion.** Con el pitch roto, el personaje "va mal" aunque la base de movimiento sea correcta, y viceversa. | Ordenarlos por la regla de jugabilidad: el pitch (Bug 1.0) es "no puedo jugar" y el handshake (1.1) es "juego pero se siente raro". Cada uno se verifica por separado, en su commit, antes de pasar al siguiente. |
+| R14 | **`Float3.Lerp` no existe en Prowl.Vector.** Un "simplificar el lerp por eje a una llamada" **no compila**. Verificado: 0 overloads en 3.5.0; lo unico parecido es `Float3.MoveTowards`. | El Bug 1.7 documenta el hallazgo y **no** cambia el lerp. Si alguien lo reintenta, la alternativa correcta es `Float3.MoveTowards` con distancia, que ademas no es lo mismo que lerp exponencial y cambiaria el comportamiento. |
+| R15 | **`Float3.Normalize` es seguro con el vector cero, pero `LookRotation` no lo es conceptualmente.** Medido: `Normalize(0)` da `(0,0,0)` y `LookRotation((0,0,0), Up)` da una rotacion finita de Euler `(0,0,0)` - no hay `NaN` ni excepcion, pero el modelo se orienta de golpe a la identidad. | El guard va **donde se usa el vector** (Bug 1.5 normaliza `lookDir`), no donde se calcula. No subir el `Normalize` fuera del `if`: solo cambia un vector sin normalizar por un vector cero. |
+| R16 | **`Facing` y la rotacion base del `ModelRoot` son el mismo ajuste por dos caminos.** Usar los dos suma los offsets y el modelo queda mal orientado. | Resuelto con tooltips que avisan explicitamente (Feature 3.1), no con un cambio de codigo. **No reordenar la multiplicacion del offset**: con `lookDir.Y == 0` el pitch siempre es 0, el Y local es el Y del mundo, y el orden es irrelevante (medido: 45 + 90 = 135 en ambos casos). |
 
 ---
 
 ## Criterios de "terminado"
 
-- [ ] Los 7 P0 de la Fase 1 arreglados, cada uno con su commit, **en el orden del plan**
+- [ ] Los 8 P0 de la Fase 1 arreglados, cada uno con su commit, **en el orden del plan**
       (pitch primero).
 - [ ] Los 2 bugs de la Fase 2 arreglados, cada uno con su commit.
+- [ ] Soltar Shift **frena** con `Deceleration`, no con `Acceleration` (Bug 1.7).
 - [ ] El Bug 1.0 incluye el cambio de rango de pitch, no solo el signo.
 - [ ] El Bug 1.0 se puede jugar: raton arriba -> la camara sube.
 - [ ] **El personaje puede saltar y puede correr.** `JumpForce` y `RunSpeed` hacen algo.
@@ -958,7 +1080,7 @@ opcionales), nunca de la Fase 1.
 - [ ] Ningun campo existente se ha renombrado. `FlatForward` / `FlatRight` son
       propiedades.
 - [ ] Todos los campos tienen tooltip, y los tooltips dicen la verdad.
-- [ ] Cobertura de tests: de 0 a 16 tests nuevos en verde, sobre el recuento de la Fase 0.
+- [ ] Cobertura de tests: de 0 a 18 tests nuevos en verde, sobre el recuento de la Fase 0.
 - [ ] `dotnet build` limpio; `dotnet test` sin regresiones.
 - [ ] El feel es mejor, segun el usuario (verificacion 5.4 respondida, no asumida).
 - [ ] Video antes/despues grabado.
