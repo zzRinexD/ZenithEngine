@@ -40,6 +40,7 @@ public class ThirdPersonCharacterMovement : MonoBehaviour
     [Header("Gravity")]
     public float Gravity = -20f;
     public float JumpForce = 8f;
+
     private float _verticalVelocity;
     private Float3 _currentHorizontalVelocity = Float3.Zero;
 
@@ -73,6 +74,15 @@ public class ThirdPersonCharacterMovement : MonoBehaviour
 
         // Guardar si estaba grounded ANTES de este move
         bool wasGrounded = Controller.IsGrounded;
+
+        // Salto. Se decide con el grounded de PRINCIPIO de frame (la linea de arriba), no
+        // con IsGrounded actual: CharacterController.Move lo actualiza al final de su
+        // llamada, asi que leerlo aqui permitiria un segundo salto en el mismo frame.
+        if (wasGrounded && Input.GetKeyDown(KeyCode.Space))
+        {
+            _verticalVelocity = JumpForce;
+            wasGrounded = false;
+        }
 
         if (wasGrounded)
         {
