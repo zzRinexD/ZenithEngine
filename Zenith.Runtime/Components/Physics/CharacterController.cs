@@ -85,9 +85,9 @@ public class CharacterController : MonoBehaviour
     [SerializeIgnore] private Float3 _cachedMeshScale = Float3.Zero;
 
     /// <summary>
-    /// Desplazamiento del centro de la forma de colisión respecto al origen del GameObject.
-    /// Por defecto (0, 0, 0) mantiene el comportamiento original: el origen está en los pies
-    /// y la forma se centra a Height/2 sobre él.
+    /// Desplazamiento del centro de la forma de colisiï¿½n respecto al origen del GameObject.
+    /// Por defecto (0, 0, 0) mantiene el comportamiento original: el origen estï¿½ en los pies
+    /// y la forma se centra a Height/2 sobre ï¿½l.
     /// </summary>
     public Float3 Center = Float3.Zero;
 
@@ -221,8 +221,8 @@ public class CharacterController : MonoBehaviour
         lastVelocity = motion;
 
         // Aplicar retroceso acumulado del frame anterior (3ra ley de Newton).
-        // Se suma al motion antes de cualquier colisión para que el personaje
-        // se mueva ligeramente hacia atrás cuando empuja algo pesado.
+        // Se suma al motion antes de cualquier colisiï¿½n para que el personaje
+        // se mueva ligeramente hacia atrï¿½s cuando empuja algo pesado.
         if (Float3.LengthSquared(_pendingRecoil) > 0.0001f)
         {
             motion += _pendingRecoil;
@@ -478,8 +478,8 @@ public class CharacterController : MonoBehaviour
 
     /// <summary>
     /// Devuelve un ConvexHullShape de la malla del MeshRenderer hermano, escalado por
-    /// Transform.LossyScale. Cachea el resultado y solo lo reconstruye si la escala cambió.
-    /// Devuelve null si no hay MeshRenderer o la malla no tiene triángulos.
+    /// Transform.LossyScale. Cachea el resultado y solo lo reconstruye si la escala cambiï¿½.
+    /// Devuelve null si no hay MeshRenderer o la malla no tiene triï¿½ngulos.
     /// </summary>
     private ConvexHullShape? ResolveMeshShape()
     {
@@ -568,7 +568,7 @@ public class CharacterController : MonoBehaviour
     }
 
     /// <summary>
-    /// Recorre los hits del último Move y aplica un impulso a cada Rigidbody3D
+    /// Recorre los hits del ï¿½ltimo Move y aplica un impulso a cada Rigidbody3D
     /// con IsPushable activado. El impulso se aplica en el punto de contacto
     /// para generar torque natural (esferas ruedan, cajas vuelcan). El
     /// retroceso se acumula en _pendingRecoil para aplicarse al siguiente frame.
@@ -670,6 +670,42 @@ public class CharacterController : MonoBehaviour
             {
                 return steppedPosition;
             }
+        }
+
+        // A cast that starts already touching the surface reports a hit at (about) zero
+        // distance, and the clamp above turns that into no advance at all. That is right for a
+        // wall the character has just run into, but wrong for the surface it is standing on:
+        // the capsule's rounded bottom grazes the floor by definition, so a grounded character
+        // hits it every frame with no distance left to travel, and the projected slide then
+        // cancels the motion. The character ends up unable to move at all.
+        //
+        // The distance is what tells the two apart, not the normal. On a triangulated floor a
+        // grazing contact picks up a lateral normal from the neighbouring triangle, which can
+        // face the motion head-on and read as a wall even though the character is standing flat
+        // on it - so a normal-based test would miss exactly the case that matters.
+        //
+        // Facing still decides what to do with a contact we are already in:
+        //   dot >  0  the surface is beside or behind us: travel the full distance. This also
+        //              covers jumping, where the floor is under us and must not stop us leaving.
+        //   dot <= 0  it is genuinely in the way: slide along it instead of stopping dead.
+        //
+        // The skin width is what "touching" means to this controller: the shapes it casts with
+        // are already shrunk by it, so a resting contact comes back at roughly that distance
+        // rather than at exactly zero.
+        if (hitInfo.Distance <= SkinWidth)
+        {
+            float facing = Float3.Dot(hitInfo.Normal, moveDirection);
+
+            // Recasting is pointless here: we would still be touching the surface we just slid
+            // along, so the identical contact comes back and burns the depth budget doing
+            // nothing. Travel the remaining distance directly instead.
+            Float3 restingMove = facing > 0f
+                ? remainingMove
+                : ProjectOntoSurface(remainingMove, hitInfo.Normal);
+
+            // A wall further along the path is invisible to a single-hit cast, so resolve
+            // whatever we just walked into rather than leaving the character inside it.
+            return Depenetrate(position + restingMove);
         }
 
         // Project remaining movement onto the hit surface (slide)
