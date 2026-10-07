@@ -145,7 +145,11 @@ public class ThirdPersonCharacterMovement : MonoBehaviour
         {
             Float3 lookDir = StrafeMode ? flatF : moveDir;
 
-            Quaternion targetRotation = Quaternion.LookRotation(lookDir, Float3.UnitY);
+            // Normalizar antes de mirar: moveDir solo se normaliza mas arriba cuando supera
+            // MovementThreshold, asi que con input analogico (gamepad) puede llegar aqui sin
+            // normalizar y LookRotation sobre un vector diminuto no da una orientacion fiable.
+            Float3 lookTarget = Float3.Normalize(lookDir);
+            Quaternion targetRotation = Quaternion.LookRotation(lookTarget, Float3.UnitY);
 
             float offsetDeg = Facing switch
             {
@@ -155,11 +159,20 @@ public class ThirdPersonCharacterMovement : MonoBehaviour
                 ModelFacing.Left_NegativeX => -90f,
                 _ => 0f
             };
+            // Post-multiplicar por un giro sobre el Y local equivale a uno sobre el Y del
+            // mundo porque lookTarget siempre tiene Y = 0, o sea que el LookRotation de
+            // arriba nunca lleva pitch.
             targetRotation = targetRotation * Quaternion.FromEuler(new Float3(0, offsetDeg, 0));
 
             Transform model = ModelRoot != null ? ModelRoot : Transform;
-            model.Rotation = Quaternion.Slerp(
-                model.Rotation, targetRotation, TurnSpeed * Time.DeltaTime);
+
+            // Damping exponencial: mismo patron que la camara y que la aceleracion horizontal
+            // de este componente. TurnSpeed * DeltaTime a secas es una interpolacion lineal,
+            // que depende del framerate (0.4 a 30 FPS contra 0.083 a 144 FPS). El clamp
+            // cubre un TurnSpeed negativo puesto a mano desde el Inspector: sin el, Slerp
+            // extrapolaria en vez de interpolar.
+            float tTurn = Maths.Clamp(1f - MathF.Exp(-TurnSpeed * Time.DeltaTime), 0f, 1f);
+            model.Rotation = Quaternion.Slerp(model.Rotation, targetRotation, tTurn);
         }
     }
 
