@@ -136,10 +136,58 @@ Otro detalle: `CharacterController.Move` actualiza `IsGrounded` al final (`:259`
 el salto debe comprobar el grounded de **principio de frame**, que es lo que ya hace
 `wasGrounded` en la linea 72. Con eso no hay doble salto ni bunny-hop.
 
-**Cobertura de tests: 0** para los dos componentes. Recuperable:
-`FakeInputHandler` (`Zenith.Runtime.Test/InputTestHelpers/FakeInputHandler.cs`) permite
-inyectar teclas, delta de raton, rueda y ejes de gamepad, y `scene.Update()` bombea
-Start -> Update -> LateUpdate (`Scene.cs:936-952`).
+**Cobertura de tests: 23 tests nuevos, todos en verde** (`OrbitFollowCameraTests`,
+`ThirdPersonCharacterMovementTests`). La suite Runtime paso de 1274 a 1297 y la de Editor
+sigue en 722, sin regresiones.
+
+---
+
+## BLOQUEER FOUND DURANTE LA EJECUCION - CharacterController no se puede despegar del suelo
+
+**Este hallazgo invalida el supuesto del Riesgo R2/R4 y deja el Bug 1.2 a medias.**
+
+Al implementar el salto se verifico que **`CharacterController.Move` no puede mover al
+personaje hacia arriba cuando esta tocando exactamente una superficie**:
+
+```
+Move(+Y) desde el suelo      -> Y no cambia, flags = Above, achieved = (0,0,0)
+Move(+Y) con 0.05 de hueco   -> Y 0.95 -> 1.078   (funciona)
+Move(-Y) con 0.05 de hueco   -> Y 0.95 -> 0.92    (funciona)
+Move(+X) con 0.05 de hueco   -> se mueve           (funciona)
+```
+
+El cast de forma hacia arriba reporta un hit a distancia 0 contra el suelo en el que esta
+apoyado, con una normal que `Record` clasifica como `Above`. `CollideAndSlide` proyecta el
+movimiento sobre esa superficie y el resultado es movimiento cero.
+
+La gravedad funciona **por la misma causa**: `SnapToGround` (`CharacterController.cs:245`)
+vuelve a pegar al personaje al suelo cada frame, asi que siempre esta en contacto exacto.
+
+**Por que no se ha arreglado aqui:** el plan declara explicitamente que
+`CharacterController` es fuera de alcance ("solo leerlo"). Son 860 lineas de fisica con
+slide, step-up y depenetration, y arreglarlo necesita su propia auditoria. Ademas el arreglo
+probablemente este en `PhysicsWorld.ShapeCast` o en como `CollideAndSlide` distingue un
+contacto inicial de un golpe real, no en el componente.
+
+**Efecto secundario observado:** como el personaje nunca se despega, `_verticalVelocity`
+positiva nunca se amortigua - el clamp de `ThirdPersonCharacterMovement` solo pisa
+velocidades **negativas**, y la rama de gravedad solo corre cuando no hay suelo. La
+velocidad se queda en 7.67 para siempre. En un setup que funcione esto no se ve, pero es
+fragilidad: el clamp de grounded deberia apply tambien a positivas, o la gravedad
+deberia aplicarse siempre y el "pegado" modelarse aparte.
+
+**Que hay que decidir:**
+
+1. Auditar y arreglar `CharacterController` / `PhysicsWorld.ShapeCast` (recomendado: es un
+   P0 de la misma clase que los que ya se arreglaron, porque sin el el personaje no salta).
+2. O meter un parche acotado: en `CollideAndSlide`, ignorar un hit cuya normal apunte en
+   contra del sentido del movimiento **y** cuya distancia sea 0 (es decir, treated como
+   "ya tocando" y no como "bloqueado"). Es un cambio pequeno pero en fisica, asi que
+   necesita tests propios.
+
+**Test que documenta el bloqueo:**
+`ThirdPersonCharacterMovementTests.Jump_CharacterLeavesTheGround_BlockedByCharacterControllerCannotSeparate`
+- cuando se arregle, hay que **invertir** sus aserciones.
 
 ---
 
