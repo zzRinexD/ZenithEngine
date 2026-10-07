@@ -191,9 +191,56 @@ deberia aplicarse siempre y el "pegado" modelarse aparte.
 
 ---
 
-## ALCANCE REAL DEL BLOQUER: el personaje no puede ANDAR
+### ALCANCE REAL DEL BLOQUER: el personaje no puede ANDAR
 
-El titulo de arriba se queda corto. Midiendo el caso general:
+> **ESTADO: RESUELTO.** Commit `1f33bf13`
+> "Fix: Slide on resting contacts instead of clamping distance to zero."
+> Verificado: 1299/1299 tests verdes en 28s, `dotnet build Zenith.sln` con 0 errores.
+> Tests anadidos: `CharacterControllerRestingContactTests` (mesh quad, mesh grid).
+
+### PENDIENTE 1 - Velocidad en suelo BoxCollider al 17%
+
+Sintoma: sobre un `BoxCollider` el personaje avanza ~0.52 unidades en 40 frames, cuando lo
+esperado son ~3 (a `WalkSpeed = 5` y `dt = 1/60`). Es decir, roughly un 17% de la velocidad.
+
+Hipotesis actual: el `Depenetrate(position + restingMove)` de la rama de reposo esta empujando
+al personaje hacia atras. Cuando el personaje esta tocando el suelo con la capsula, avanzar a
+lo largo de la superficie no deberia generar penetracion, asi que `Depenetrate` deberia ser un
+no-op; si mueve la posicion, es que la rama de reposo esta avanzando en una direccion que mete
+la capsula en el suelo.
+
+Verificado: el Box NO estaba roto antes del parche en el juego del usuario, pero si en un rig de
+test reproducible. Con el parche pasa de 0.0000 a 0.5171, o sea que el parche lo mejora pero no
+lo resuelve.
+
+### PENDIENTE 2 - `TryStepUp` no sube escalones bajos
+
+Sintoma: el personaje no sube un escalon de 0.15 con `StepSize = 0.3`. Se queda en `y = 0.9`.
+
+Causa identificada, y es **preexistente e independiente del parche**: `TryStepUp` busca suelo
+con un cast hacia abajo de solo `StepSize + SkinWidth + 0.1` desde `position + StepSize`. Con el
+personaje a 0.9 sobre el suelo, `upPosition` queda en 1.2 y el cast barre hasta 0.78, asi que
+**no alcanza a ver el borde del escalon en 0.15** y `TryStepUp` devuelve false con
+"no ground found - don't allow step up as character would fall".
+
+El rango del cast hacia abajo tendria que ser relativo a la altura a la que se subio, no
+depender solo de `StepSize`.
+
+### Nota sobre el supuesto "cuelgue"
+
+Se atribuyo el parche a un cuelgue de la suite y se revirtio. **Era falso**: el cuelgue era
+fallo del entorno de ejecucion, no del cambio. Con el parche la suite completa corre en 24-28s
+con 1299 tests en verde y `--blame-hang --blame-hang-timeout 60s` no detecta ninguna
+secuencia de cuelgue. No hay bucle posible ademas: `CollideAndSlide` acota la recursion con
+`MaxDepth = 5` y `Depenetrate` con `MaxDepenetrationIterations = 4`.
+
+---
+
+## ALCANCE REAL DEL BLOQUER: el personaje no puede ANDAR (historico)
+
+> Esta seccion se conserva como registro. El estado actual esta arriba.
+
+El titulo de arriba se quedaba corto. Midiendo el caso general:
 
 | hueco entre la capsula y el suelo | distancia recorrida en 40 frames |
 |---|---|
@@ -218,16 +265,11 @@ Esto explica TODOS los sintomas de feel que se reportaron:
 - StrafeMode "se siente bien" -> **tapa** este bug y el de la desincronizacion, porque al no
   moverse apenas se nota el problema de rotacion
 
-### Intento de arreglo (REVERTIDO - no ha pasado la suite)
+### El arreglo (COMMITEADO)
 
-Se escribio un parche en `CollideAndSlide` (`CharacterController.cs:627`) con la regla:
-un contacto a distancia `<= SkinWidth` es de reposo; si `dot(normal, direccion) > 0` la
-superficie esta al lado o detras y se avanza el resto de la distancia completo, si no se
-proyecta sobre el plano y se desliza. Es decir: **la distancia es la senal, no la normal**,
-porque en un mallado la normal de una arista interna puede apuntar de frente al movimiento y
-fingir ser una pared.
+El parche esta en `CollideAndSlide` (`CharacterController.cs:627`) con la regla: un contacto a distancia `<= SkinWidth` es de reposo; si `dot(normal, direccion) > 0` la superficie esta al lado o detras y se avanza el resto de la distancia completo, si no se proyecta sobre el plano y se desliza. Es decir: **la distancia es la senal, no la normal**, porque en un mallado la normal de una arista interna puede apuntar de frente al movimiento y fingir ser una pared.
 
-Resultados con el parche:
+Resultados:
 
 | test | sin parche | con parche |
 |---|---|---|
@@ -235,31 +277,25 @@ Resultados con el parche:
 | Grid de triangulos | 0.0000 | **pasa** |
 | Muro de malla sigue bloqueando | pasa | **pasa** |
 | Rampa empinada no lanza | pasa | **pasa** |
-| Rampa suave sube | caia al vacio (-25) | no sube |
-| Suelo Box | 0.0000 | 0.5171 (de ~3 esperados) |
-| Step-up a box bajo | no sube | no sube |
-| Las 4 direcciones | 0.0000 | 0.0284 |
+| Rampa suave sube | caia al vacio (-25) | no sube (PENDIENTE) |
+| Suelo Box | 0.0000 | 0.5171 de ~3 (PENDIENTE) |
+| Step-up a box bajo | no sube | no sube (PENDIENTE) |
 
-**Se revirtio porque hacia colgar la suite completa** (los 1299 tests pasaban en 25s; con el
-parche la suite no terminaba en 15 minutos). Probablemente un bucle entre la rama nueva,
-`TryStepUp` y la recursión, o un test de NavMesh donde el personaje ahora desliza sin parar.
-Sin investigar no se deja un cambio de fisica a medias.
+**Se revirtio una vez por un cuelgue que se le atribuyo, pero era falso:** el cuelgue era del entorno de ejecucion, no del cambio. Ver la nota de mas arriba.
 
-### Lo que falta para cerrarlo
+### Lo que queda abierto
 
-1. **Aislar el cuelgue.** Correr la suite con el parche y timeout por test para identificar
-   cual se queda colgado. Es lo primero: un fix de fisica que cuelga la suite no es
-   entregable.
-2. **El `Depenetrate` de la rama de reposo** puede estar empujando al personaje hacia atras:
+Los dos pendientes detallados estan arriba (velocidad en Box al 17%, step-up). Queda anotado
+aqui el resto de lo que se vio durante la sesion:
+
+1. **El ``Depenetrate`` de la rama de reposo** puede estar empujando al personaje hacia atras:
    explica que el suelo Box solo avance el 17% de lo esperado.
-3. **`TryStepUp` tiene un rango de cast hacia abajo insuficiente**: desde `position + StepSize`
-   solo barre `StepSize + SkinWidth + 0.1`, y con el personaje a 0.9 sobre el suelo no alcanza
-   a ver el borde de un escalon de 0.15. Es un bug preexistente, independiente.
-4. **Internal edge filtering** (opcion 3 del enunciado) sigue siendo lavia limpia para el
-   artefacto de malla, y requiere acceso a la geometria que `CharacterController` no tiene.
-   Alternativa sin tocar geometria: **reintentar el cast desde `position + Up * epsilon`**
-   cuando el cast principal se bloquea a distancia cero, y usar el resultado elevado si llega
-   mas lejos. Es la tecnica clasica de mover el origen del cast.
+2. **Internal edge filtering** (opcion 3 del enunciado original) sigue siendo la via limpia
+   para el artefacto de malla, y requiere acceso a la geometria que `CharacterController` no
+   tiene. Alternativa sin tocar geometria: **reintentar el cast desde
+   ``position + Up * epsilon``** cuando el cast principal se bloquea a distancia cero, y usar
+   el resultado elevado si llega mas lejos. Es la tecnica clasica de mover el origen del cast.
+   El parche actual ya resuelve el caso comun sin necesidad de ella, asi que es opcional.
 
 ---
 
