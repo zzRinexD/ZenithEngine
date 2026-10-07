@@ -16,26 +16,42 @@ public class ThirdPersonCharacterMovement : MonoBehaviour
     }
 
     [Header("References")]
+    [Tooltip("Camara de la que se toma la base de movimiento. Debe ser una OrbitFollowCamera: publica FlatForward y FlatRight.")]
     public OrbitFollowCamera Camera;
+
+    [Tooltip("CharacterController que hace el movimiento y la colision.")]
     public CharacterController Controller;
 
     [Header("Feel")]
+    [Tooltip("Rapidez con la que el personaje alcanza la velocidad objetivo.")]
     public float Acceleration = 25f;
+
+    [Tooltip("Rapidez con la que el personaje frena. Mayor = frena mas rapido.")]
     public float Deceleration = 30f;
 
     [Header("Movement")]
+    [Tooltip("Velocidad horizontal andando, en unidades/segundo.")]
     public float WalkSpeed = 5f;
+
+    [Tooltip("Velocidad horizontal con Shift, en unidades/segundo. Requiere Shift izquierdo o derecho.")]
     public float RunSpeed = 8f;
+
+    [Tooltip("Velocidad de giro del modelo hacia la direccion de movimiento. Mayor = gira mas rapido.")]
     public float TurnSpeed = 12f;
 
     [Header("Model")]
+    [Tooltip("Transform del modelo que rota. Si esta vacio, rota el GameObject entero. No le pongas rotacion en el editor si vas a usar Facing: los dos mecanismos se suman y la orientacion sale mal.")]
     public Transform ModelRoot;
+
+    [Tooltip("Correccion de orientacion del modelo respecto a su forward. Usa esto o la rotacion base del ModelRoot, nunca las dos: son el mismo ajuste por dos caminos.")]
     public ModelFacing Facing = ModelFacing.Forward_Z;
 
     [Header("Orientation")]
+    [Tooltip("Si esta activo, el personaje siempre mira hacia donde mira la camara en vez de hacia donde se mueve.")]
     public bool StrafeMode = false;
 
     [Header("Input")]
+    [Tooltip("Umbral de input minimo para considerar que hay movimiento. Con teclado el input solo puede ser 0, 1 o diagonal, asi que cualquier valor entre 0 y 1 se comporta igual.")]
     public float MovementThreshold = 0.05f;
 
     [Header("Turning")]
@@ -46,7 +62,10 @@ public class ThirdPersonCharacterMovement : MonoBehaviour
     private float _turnRate = 20f;
 
     [Header("Gravity")]
+    [Tooltip("Aceleracion hacia abajo, en unidades/s2. Negativo.")]
     public float Gravity = -20f;
+
+    [Tooltip("Velocidad vertical inicial del salto, en unidades/segundo. 8 salta alrededor de 1.6 m con Gravity = -20.")]
     public float JumpForce = 8f;
 
     private float _verticalVelocity;
