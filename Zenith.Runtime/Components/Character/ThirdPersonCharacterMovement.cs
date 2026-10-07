@@ -37,6 +37,13 @@ public class ThirdPersonCharacterMovement : MonoBehaviour
     [Header("Input")]
     public float MovementThreshold = 0.05f;
 
+    [Header("Turning")]
+    [SerializeField, Tooltip("Permite una tasa de giro distinta de la aceleracion al cambiar de direccion.")]
+    private bool _turnRateEnabled = false;
+
+    [SerializeField, Tooltip("Tasa usada al cambiar de sentido. Mayor = gira mas rapido."), EnableIf("_turnRateEnabled")]
+    private float _turnRate = 20f;
+
     [Header("Gravity")]
     public float Gravity = -20f;
     public float JumpForce = 8f;
@@ -106,7 +113,24 @@ public class ThirdPersonCharacterMovement : MonoBehaviour
         }
 
         float dtMove = Time.DeltaTime;
-        float accelRate = targetVelocity == Float3.Zero ? Deceleration : Acceleration;
+
+        // Elegir la tasa por si estamos frenando o acelerando, no por si el objetivo es
+        // cero. Antes, soltar Shift (8 -> 5) frenaba con Acceleration, igual que arrancar
+        // desde el reposo: la misma accion con dos tasas distintas segun cuanto se frena,
+        // y sin ningun campo para ajustarlo.
+        float currentSpeed = Float3.Length(_currentHorizontalVelocity);
+        float targetSpeed = Float3.Length(targetVelocity);
+        float accelRate = targetSpeed < currentSpeed ? Deceleration : Acceleration;
+
+        if (_turnRateEnabled
+            && currentSpeed > 0.01f
+            && Float3.Dot(_currentHorizontalVelocity, targetVelocity) < 0f)
+        {
+            // Giro de verdad, no un simple cambio de diagonal: el Dot solo se hace
+            // negativo cuando el objetivo apunta al lado contrario del movimiento.
+            accelRate = _turnRate;
+        }
+
         float tVel = 1f - MathF.Exp(-accelRate * dtMove);
         _currentHorizontalVelocity = new Float3(
             Maths.Lerp(_currentHorizontalVelocity.X, targetVelocity.X, tVel),
