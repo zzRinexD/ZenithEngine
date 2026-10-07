@@ -4,7 +4,7 @@ using Prowl.Vector;
 
 namespace Prowl.Runtime;
 
-[AddComponentMenu("Camera/Orbit Follow Camera")]
+    [AddComponentMenu("Camera/Orbit Follow Camera")]
 public class OrbitFollowCamera : MonoBehaviour
 {
     public enum OrbitMode
@@ -42,13 +42,13 @@ public class OrbitFollowCamera : MonoBehaviour
     public float MaxPitch = 18f;
 
     [Header("Feel (optional)")]
-    [Tooltip("Invierte el eje vertical. Para quien juegue con control invertido.")]
+    [SerializeField, Tooltip("Invierte el eje vertical. Para quien juegue con control invertido.")]
     private bool _invertY = false;
 
-    [Tooltip("Normaliza la sensibilidad por la altura del framebuffer, para que a 4K no gire el doble que a 1080p.")]
+    [SerializeField, Tooltip("Normaliza la sensibilidad por la altura del framebuffer, para que a 4K no gire el doble que a 1080p.")]
     private bool _resolutionNormalizedSensitivity = true;
 
-    [Tooltip("Altura de referencia en pixeles. 1080 es el estandar."), EnableIf("_resolutionNormalizedSensitivity")]
+    [SerializeField, Tooltip("Altura de referencia en pixeles. 1080 es el estandar."), EnableIf("_resolutionNormalizedSensitivity")]
     private float _referenceHeight = 1080f;
 
     [Header("Follow")]
@@ -59,26 +59,26 @@ public class OrbitFollowCamera : MonoBehaviour
     public float ChestOffset = 1.0f;
 
     [Header("Zoom")]
-    [Tooltip("Zoom con la rueda del raton. Si esta desactivado, la distancia es fija.")]
+    [SerializeField, Tooltip("Zoom con la rueda del raton. Si esta desactivado, la distancia es fija.")]
     private bool _zoomEnabled = true;
 
-    [Tooltip("Distancia minima al hacer zoom in. Es el rango del zoom, no el minimo por colision (MinDistance)."), EnableIf("_zoomEnabled")]
+    [SerializeField, Tooltip("Distancia minima al hacer zoom in. Es el rango del zoom, no el minimo por colision (MinDistance)."), EnableIf("_zoomEnabled")]
     private float _minZoomDistance = 2f;
 
-    [Tooltip("Distancia maxima al hacer zoom out. Es el rango del zoom, no el minimo por colision (MinDistance)."), EnableIf("_zoomEnabled")]
+    [SerializeField, Tooltip("Distancia maxima al hacer zoom out. Es el rango del zoom, no el minimo por colision (MinDistance)."), EnableIf("_zoomEnabled")]
     private float _maxZoomDistance = 15f;
 
-    [Tooltip("Velocidad del zoom. 1 = un tope de rueda recorre el rango completo."), EnableIf("_zoomEnabled")]
+    [SerializeField, Tooltip("Velocidad del zoom. 1 = un tope de rueda recorre el rango completo."), EnableIf("_zoomEnabled")]
     private float _zoomSpeed = 1f;
 
     [Header("Collision")]
     [Tooltip("Evita que la camara atraviese paredes y geometria. Acerca la camara automaticamente cuando algo se interpone.")]
     public bool CollisionEnabled = true;
 
-    [Tooltip("Que tan rapido se acerca la camara al obstaculo. Alto = casi instantaneo."), EnableIf("CollisionEnabled")]
+    [SerializeField, Tooltip("Que tan rapido se acerca la camara al obstaculo. Alto = casi instantaneo."), EnableIf("CollisionEnabled")]
     private float _collisionPullInSpeed = 20f;
 
-    [Tooltip("Que tan rapido se aleja la camara cuando el obstaculo desaparece. Bajo = sale despacio."), EnableIf("CollisionEnabled")]
+    [SerializeField, Tooltip("Que tan rapido se aleja la camara cuando el obstaculo desaparece. Bajo = sale despacio."), EnableIf("CollisionEnabled")]
     private float _collisionPushOutSpeed = 5f;
 
     [Tooltip("Margen que deja la camara respecto al obstaculo."), EnableIf("CollisionEnabled")]
@@ -88,23 +88,23 @@ public class OrbitFollowCamera : MonoBehaviour
     public float MinDistance = 1f;
 
     [Header("Teleport")]
-    [Tooltip("Salta al pivote en vez de volar hasta el cuando el target se teletransporta.")]
+    [SerializeField, Tooltip("Salta al pivote en vez de volar hasta el cuando el target se teletransporta.")]
     private bool _snapOnTeleport = true;
 
-    [Tooltip("Distancia en un solo frame a partir de la cual se considera teleport."), EnableIf("_snapOnTeleport")]
+    [SerializeField, Tooltip("Distancia en un solo frame a partir de la cual se considera teleport."), EnableIf("_snapOnTeleport")]
     private float _teleportThreshold = 5f;
 
     [Header("Gamepad (optional)")]
-    [Tooltip("Permite orbitar la camara con el stick derecho del mando.")]
+    [SerializeField, Tooltip("Permite orbitar la camara con el stick derecho del mando.")]
     private bool _gamepadEnabled = true;
 
-    [Tooltip("Indice del mando. 0 es el primero."), Range(0, 15), EnableIf("_gamepadEnabled")]
+    [SerializeField, Tooltip("Indice del mando. 0 es el primero."), Range(0, 15), EnableIf("_gamepadEnabled")]
     private int _gamepadIndex = 0;
 
-    [Tooltip("Sensibilidad del stick derecho."), EnableIf("_gamepadEnabled")]
+    [SerializeField, Tooltip("Sensibilidad del stick derecho."), EnableIf("_gamepadEnabled")]
     private float _gamepadSensitivity = 2f;
 
-    [Tooltip("Zona muerta del stick. Evita que la camara derive sola."), Range(0f, 0.5f), EnableIf("_gamepadEnabled")]
+    [SerializeField, Tooltip("Zona muerta del stick. Evita que la camara derive sola."), Range(0f, 0.5f), EnableIf("_gamepadEnabled")]
     private float _gamepadDeadzone = 0.15f;
 
     private float _yawTarget;
@@ -184,12 +184,13 @@ public class OrbitFollowCamera : MonoBehaviour
         float tRot = 1f - MathF.Exp(-RotationSmoothing * dtRot);
 
         // 1a. Sensibilidad efectiva. El delta del raton viene en pixeles del framebuffer, asi
-        // que a 4K se recibe el doble que a 1080p para el mismo movimiento fisico. La guarda
-        // height > 0 es obligatoria: con framebuffer 0 (headless, tests, antes de que exista
-        // la ventana) esto seria una division por cero y un NaN en _pitchTarget que se lleva
-        // la camara lejos para siempre.
+        // que a 4K se recibe el doble que a 1080p para el mismo movimiento fisico.
+        // Las dos guardas son obligatorias y en este orden: sin ventana (headless, tests,
+        // antes de que exista) InternalWindow es null y saltaria antes de llegar al height,
+        // y con framebuffer 0 esto seria una division por cero cuyo NaN en _pitchTarget se
+        // lleva la camara lejos para siempre.
         float sens = Sensitivity;
-        if (_resolutionNormalizedSensitivity)
+        if (_resolutionNormalizedSensitivity && Window.InternalWindow != null)
         {
             int height = Window.InternalWindow.FramebufferSize.Y;
             if (height > 0)
