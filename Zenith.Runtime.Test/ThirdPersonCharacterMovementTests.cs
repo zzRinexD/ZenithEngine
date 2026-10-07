@@ -204,45 +204,76 @@ public class ThirdPersonCharacterMovementTests : RuntimeTestBase
     // ---------------------------------------------------------------------------------------
 
     /// <summary>
-    /// A pure strafe used not to rotate the model at all, so the character moonwalked
-    /// sideways while still facing where the camera looked.
+    /// The whole quadrant, not just D. The rotation gate used to compare input SIGN
+    /// (<c>inputY &gt; 0.01f || inputX &gt; 0.01f</c>), which left the back-left quadrant -
+    /// A, S and S+A - with <c>shouldRotate = false</c>. That was not "the model stays put" but
+    /// "the heading freezes": the body moved at WalkSpeed in one direction while the model
+    /// kept facing the last valid angle. A moonwalked sideways, S backpedalled blindly, and
+    /// because the gate flipped on and off with every key the heading appeared to oscillate.
+    /// <para>
+    /// The model starts at yaw 45 on purpose, so all four cases have to perform a real turn.
+    /// From the rig's default yaw 0 the W case would pass trivially, because its target
+    /// heading <em>is</em> 0 - and a test that cannot fail is how the A gap survived the fix
+    /// for Bug 1.4 in the first place. Only D was covered, and only D happened to work.
+    /// </para>
     /// </summary>
-    [Fact]
-    public void PureStrafe_RotatesModel_TowardTheStrafe()
+    [Theory]
+    [InlineData(KeyCode.W, 0f)]
+    [InlineData(KeyCode.S, 180f)]
+    [InlineData(KeyCode.D, 90f)]
+    [InlineData(KeyCode.A, -90f)]
+    public void FaceMovement_RotatesModel_TowardTheMovementDirection(KeyCode key, float expectedYaw)
     {
         var (scene, move, _, _) = CreateRig();
 
         Update(scene, 2);
-        float yawBefore = move.Transform.Rotation.EulerAngles.Y;
+        move.Transform.Rotation = Quaternion.FromEuler(0f, 45f, 0f);
 
-        _input.PressKey(KeyCode.D);
+        _input.PressKey(key);
         Tick(scene, 120);
 
-        float yawAfter = move.Transform.Rotation.EulerAngles.Y;
-        Assert.True(MathF.Abs(ShortestAngle(yawAfter - yawBefore)) > 20f,
-            $"A pure D must turn the model, not slide it sideways. {yawBefore} -> {yawAfter}.");
-
-        // D is +X with the camera at yaw 0, so the model must end up facing +X (yaw 90).
-        Assert.True(MathF.Abs(ShortestAngle(yawAfter - 90f)) < 5f,
-            $"After a pure D the model must face +X (yaw ~90); was {yawAfter}.");
+        float yaw = move.Transform.Rotation.EulerAngles.Y;
+        Assert.True(MathF.Abs(ShortestAngle(yaw - expectedYaw)) < 5f,
+            $"{key} must turn the model to face {expectedYaw} degrees, not slide it; " +
+            $"it ended at {yaw}.");
     }
 
-    /// <summary>S alone is a backpedal and must keep NOT rotating the model.</summary>
+    /// <summary>
+    /// S in FaceMovement pivots the model 180 degrees, and afterwards the model faces where it
+    /// moves. This is the <em>corrected</em> assertion: the test it replaces,
+    /// <c>BackwardOnly_DoesNotRotate</c>, asserted that a pure S left the model untouched -
+    /// which is precisely the bug. It pinned the broken behaviour in place, so the freeze
+    /// could not be caught from the suite that was supposed to be guarding it.
+    /// <para>
+    /// Velocity and heading agreeing is the part worth keeping beyond the yaw: it is the
+    /// invariant that separates "walks backwards deliberately" from "slides backwards while
+    /// facing somewhere else entirely", and the second one is what S actually did.
+    /// </para>
+    /// </summary>
     [Fact]
-    public void BackwardOnly_DoesNotRotate()
+    public void Backward_RotatesModel_180Degrees_AndWalksWhereItLooks()
     {
         var (scene, move, _, _) = CreateRig();
 
         Update(scene, 2);
-        Quaternion before = move.Transform.Rotation;
 
         _input.PressKey(KeyCode.S);
         Tick(scene, 120);
 
-        Assert.True(Float3.Distance(
-            (move.Transform.Rotation * Float3.UnitZ),
-            (before * Float3.UnitZ)) < 1e-2f,
-            "A pure S must not turn the model: backpedal, not pivot.");
+        float yaw = move.Transform.Rotation.EulerAngles.Y;
+        Assert.True(MathF.Abs(ShortestAngle(yaw - 180f)) < 5f,
+            $"A pure S must pivot the model 180 degrees, not freeze its heading; ended at {yaw}.");
+
+        Float3 modelForward = move.Transform.Rotation * Float3.UnitZ;
+        modelForward.Y = 0f;
+        modelForward = Float3.Normalize(modelForward);
+
+        Float3 velocity = VelocityOf(move);
+        velocity.Y = 0f;
+        velocity = Float3.Normalize(velocity);
+
+        Assert.True(Float3.Distance(modelForward, velocity) < 1e-2f,
+            $"The model must face where it moves; it looks {modelForward} but moves {velocity}.");
     }
 
     /// <summary>

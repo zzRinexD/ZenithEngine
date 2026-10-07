@@ -172,9 +172,13 @@ public class ThirdPersonCharacterMovement : MonoBehaviour
 
         // Solo rotar el modelo cuando hay input de movimiento.
         // En Strafe el personaje siempre mira hacia donde mira la camara.
-        // En FaceMovement rota con cualquier componente, para que el puro A/D no produzca
-        // un moonwalk lateral (antes solo giraba con input vertical y el personaje se
-        // deslizaba de lado mirando al frente). S pura sigue sin rotar: backpedal.
+        // En FaceMovement rota con CUALQUIER componente, incluido el negativo: el gate
+        // compara magnitudes (mag), no signos. Con `inputY > 0.01f || inputX > 0.01f` el
+        // cuadrante tras-izquierdo (A, S, S+A) quedaba con shouldRotate = false, lo que no
+        // es "quieto" sino "heading congelado": el cuerpo se movia a WalkSpeed en otra
+        // direccion mientras el modelo seguia mirando al ultimo angulo valido. Eso es
+        // moonwalk lateral con A y backpedal a ciegas con S, y es lo que hacia que S
+        // pareciese oscilar: el gate se encendia y apagaba con cada tecla.
         bool shouldRotate;
         if (StrafeMode)
         {
@@ -182,7 +186,7 @@ public class ThirdPersonCharacterMovement : MonoBehaviour
         }
         else
         {
-            shouldRotate = inputY > 0.01f || inputX > 0.01f;
+            shouldRotate = mag > MovementThreshold;
         }
 
         if (shouldRotate)
