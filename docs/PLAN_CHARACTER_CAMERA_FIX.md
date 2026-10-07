@@ -191,6 +191,78 @@ deberia aplicarse siempre y el "pegado" modelarse aparte.
 
 ---
 
+## ALCANCE REAL DEL BLOQUER: el personaje no puede ANDAR
+
+El titulo de arriba se queda corto. Midiendo el caso general:
+
+| hueco entre la capsula y el suelo | distancia recorrida en 40 frames |
+|---|---|
+| **0.000 (tocando)** | **0.0000** |
+| 0.020 | 3.09 |
+| 0.050 | 3.09 |
+
+**El personaje no se mueve en NINGUNA direccion mientras toca el suelo exactamente.** La
+velocidad se calcula bien (llega a 5.0) pero la posicion no cambia. Y `SnapToGround` lo
+devuelve a tocar exactamente cada frame, asi que se queda pegado de forma permanente.
+
+Corregido por el usuario: **es especifico de `MeshCollider`**. Con `BoxCollider` se mueve bien
+en el juego (aunque en un rig de test reproducible tambien se atasca). La causa probable son
+**internal edge artifacts**: la capsula contacta una arista interna de la triangulacion, la
+normal sale lateral en vez de vertical, y el slide contra esa normal anula el movimiento
+horizontal.
+
+Esto explica TODOS los sintomas de feel que se reportaron:
+- "me quedo atascado al piso" -> literalmente esto
+- "camina sin ganas" -> movimiento cero
+- "se bloquea" -> el cast no avanza
+- StrafeMode "se siente bien" -> **tapa** este bug y el de la desincronizacion, porque al no
+  moverse apenas se nota el problema de rotacion
+
+### Intento de arreglo (REVERTIDO - no ha pasado la suite)
+
+Se escribio un parche en `CollideAndSlide` (`CharacterController.cs:627`) con la regla:
+un contacto a distancia `<= SkinWidth` es de reposo; si `dot(normal, direccion) > 0` la
+superficie esta al lado o detras y se avanza el resto de la distancia completo, si no se
+proyecta sobre el plano y se desliza. Es decir: **la distancia es la senal, no la normal**,
+porque en un mallado la normal de una arista interna puede apuntar de frente al movimiento y
+fingir ser una pared.
+
+Resultados con el parche:
+
+| test | sin parche | con parche |
+|---|---|---|
+| Quad de 2 triangulos | 0.0000 | **pasa** |
+| Grid de triangulos | 0.0000 | **pasa** |
+| Muro de malla sigue bloqueando | pasa | **pasa** |
+| Rampa empinada no lanza | pasa | **pasa** |
+| Rampa suave sube | caia al vacio (-25) | no sube |
+| Suelo Box | 0.0000 | 0.5171 (de ~3 esperados) |
+| Step-up a box bajo | no sube | no sube |
+| Las 4 direcciones | 0.0000 | 0.0284 |
+
+**Se revirtio porque hacia colgar la suite completa** (los 1299 tests pasaban en 25s; con el
+parche la suite no terminaba en 15 minutos). Probablemente un bucle entre la rama nueva,
+`TryStepUp` y la recursión, o un test de NavMesh donde el personaje ahora desliza sin parar.
+Sin investigar no se deja un cambio de fisica a medias.
+
+### Lo que falta para cerrarlo
+
+1. **Aislar el cuelgue.** Correr la suite con el parche y timeout por test para identificar
+   cual se queda colgado. Es lo primero: un fix de fisica que cuelga la suite no es
+   entregable.
+2. **El `Depenetrate` de la rama de reposo** puede estar empujando al personaje hacia atras:
+   explica que el suelo Box solo avance el 17% de lo esperado.
+3. **`TryStepUp` tiene un rango de cast hacia abajo insuficiente**: desde `position + StepSize`
+   solo barre `StepSize + SkinWidth + 0.1`, y con el personaje a 0.9 sobre el suelo no alcanza
+   a ver el borde de un escalon de 0.15. Es un bug preexistente, independiente.
+4. **Internal edge filtering** (opcion 3 del enunciado) sigue siendo lavia limpia para el
+   artefacto de malla, y requiere acceso a la geometria que `CharacterController` no tiene.
+   Alternativa sin tocar geometria: **reintentar el cast desde `position + Up * epsilon`**
+   cuando el cast principal se bloquea a distancia cero, y usar el resultado elevado si llega
+   mas lejos. Es la tecnica clasica de mover el origen del cast.
+
+---
+
 ## Fases
 
 ### Fase 0 - Preparacion (~20 min)
