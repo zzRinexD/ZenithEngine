@@ -1,4 +1,5 @@
 using System;
+using Prowl.Echo;
 using Prowl.Vector;
 
 namespace Prowl.Runtime;
@@ -13,32 +14,106 @@ public class OrbitFollowCamera : MonoBehaviour
     }
 
     [Header("Target")]
+    [Tooltip("Transform al que sigue la camara. Sin el el componente no hace nada.")]
     public Transform Target;
+
+    [Tooltip("Altura del pivote sobre los pies del target. Es el punto alrededor del que orbita la camara.")]
     public float TargetHeight = 1.5f;
 
     [Header("Orbit")]
+    [Tooltip("HoldRightClick: orbita solo con el boton derecho. LockedCursor: captura el cursor.")]
     public OrbitMode Mode = OrbitMode.LockedCursor;
+
+    [Tooltip("Distancia de la camara al pivote. El zoom con rueda modifica este valor en runtime.")]
     public float Distance = 6f;
+
+    [Tooltip("Sensibilidad del raton, en grados por pixel. Rango recomendado: 0.05 - 0.5.")]
     public float Sensitivity = 0.13f;
+    [Tooltip("Multiplicador de sensibilidad en modo HoldRightClick.")]
     public float HoldModeSensitivityMultiplier = 1.8f;
+
+    [Tooltip("Suavizado de la rotacion. Mayor = mas rigido e inmediato."), Range(5f, 30f)]
     public float RotationSmoothing = 18f;
+
+    [Tooltip("Limite inferior de inclinacion, en grados. Negativo = por encima del horizonte.")]
     public float MinPitch = -36f;
+
+    [Tooltip("Limite superior de inclinacion, en grados. Positivo = por debajo del horizonte.")]
     public float MaxPitch = 18f;
 
+    [Header("Feel (optional)")]
+    [Tooltip("Invierte el eje vertical. Para quien juegue con control invertido.")]
+    private bool _invertY = false;
+
+    [Tooltip("Normaliza la sensibilidad por la altura del framebuffer, para que a 4K no gire el doble que a 1080p.")]
+    private bool _resolutionNormalizedSensitivity = true;
+
+    [Tooltip("Altura de referencia en pixeles. 1080 es el estandar."), EnableIf("_resolutionNormalizedSensitivity")]
+    private float _referenceHeight = 1080f;
+
     [Header("Follow")]
+    [Tooltip("Suavizado de la posicion del pivote. Mayor = la camara pisa mas."), Range(5f, 30f)]
     public float FollowSmoothing = 10f;
+
+    [Tooltip("Altura del punto de mira sobre los pies del target.")]
     public float ChestOffset = 1.0f;
 
+    [Header("Zoom")]
+    [Tooltip("Zoom con la rueda del raton. Si esta desactivado, la distancia es fija.")]
+    private bool _zoomEnabled = true;
+
+    [Tooltip("Distancia minima al hacer zoom in. Es el rango del zoom, no el minimo por colision (MinDistance)."), EnableIf("_zoomEnabled")]
+    private float _minZoomDistance = 2f;
+
+    [Tooltip("Distancia maxima al hacer zoom out. Es el rango del zoom, no el minimo por colision (MinDistance)."), EnableIf("_zoomEnabled")]
+    private float _maxZoomDistance = 15f;
+
+    [Tooltip("Velocidad del zoom. 1 = un tope de rueda recorre el rango completo."), EnableIf("_zoomEnabled")]
+    private float _zoomSpeed = 1f;
+
     [Header("Collision")]
-    public bool CollisionEnabled = false;
+    [Tooltip("Evita que la camara atraviese paredes y geometria. Acerca la camara automaticamente cuando algo se interpone.")]
+    public bool CollisionEnabled = true;
+
+    [Tooltip("Que tan rapido se acerca la camara al obstaculo. Alto = casi instantaneo."), EnableIf("CollisionEnabled")]
+    private float _collisionPullInSpeed = 20f;
+
+    [Tooltip("Que tan rapido se aleja la camara cuando el obstaculo desaparece. Bajo = sale despacio."), EnableIf("CollisionEnabled")]
+    private float _collisionPushOutSpeed = 5f;
+
+    [Tooltip("Margen que deja la camara respecto al obstaculo."), EnableIf("CollisionEnabled")]
     public float CollisionRadius = 0.2f;
+
+    [Tooltip("Distancia minima a la que la colision puede acercar la camara."), EnableIf("CollisionEnabled")]
     public float MinDistance = 1f;
+
+    [Header("Teleport")]
+    [Tooltip("Salta al pivote en vez de volar hasta el cuando el target se teletransporta.")]
+    private bool _snapOnTeleport = true;
+
+    [Tooltip("Distancia en un solo frame a partir de la cual se considera teleport."), EnableIf("_snapOnTeleport")]
+    private float _teleportThreshold = 5f;
+
+    [Header("Gamepad (optional)")]
+    [Tooltip("Permite orbitar la camara con el stick derecho del mando.")]
+    private bool _gamepadEnabled = true;
+
+    [Tooltip("Indice del mando. 0 es el primero."), Range(0, 15), EnableIf("_gamepadEnabled")]
+    private int _gamepadIndex = 0;
+
+    [Tooltip("Sensibilidad del stick derecho."), EnableIf("_gamepadEnabled")]
+    private float _gamepadSensitivity = 2f;
+
+    [Tooltip("Zona muerta del stick. Evita que la camara derive sola."), Range(0f, 0.5f), EnableIf("_gamepadEnabled")]
+    private float _gamepadDeadzone = 0.15f;
 
     private float _yawTarget;
     private float _pitchTarget;
     private float _yaw;
     private float _pitch;
     private Float3 _smoothedTargetPos;
+    private Float3 _lastRawPivot;
+    private float _currentDistance;
     private bool _hasTargetPos;
     private OrbitMode _lastAppliedMode = (OrbitMode)(-1);
 
@@ -103,17 +178,67 @@ public class OrbitFollowCamera : MonoBehaviour
             // HoldRightClick: solo orbitar mientras el boton derecho esta pulsado
             shouldOrbit = Input.GetMouseButton(1);
         }
-        if (shouldOrbit)
-        {
-            float mult = Mode == OrbitMode.HoldRightClick ? HoldModeSensitivityMultiplier : 1f;
-            _yawTarget += Input.MouseDelta.X * Sensitivity * mult;
-            _pitchTarget += Input.MouseDelta.Y * Sensitivity * mult;
-        }
-        _pitchTarget = Maths.Clamp(_pitchTarget, MinPitch, MaxPitch);
 
         // Suavizar la rotacion hacia el objetivo (frame-rate independent)
         float dtRot = Time.DeltaTime;
         float tRot = 1f - MathF.Exp(-RotationSmoothing * dtRot);
+
+        // 1a. Sensibilidad efectiva. El delta del raton viene en pixeles del framebuffer, asi
+        // que a 4K se recibe el doble que a 1080p para el mismo movimiento fisico. La guarda
+        // height > 0 es obligatoria: con framebuffer 0 (headless, tests, antes de que exista
+        // la ventana) esto seria una division por cero y un NaN en _pitchTarget que se lleva
+        // la camara lejos para siempre.
+        float sens = Sensitivity;
+        if (_resolutionNormalizedSensitivity)
+        {
+            int height = Window.InternalWindow.FramebufferSize.Y;
+            if (height > 0)
+                sens *= _referenceHeight / height;
+        }
+
+        if (shouldOrbit)
+        {
+            float mult = Mode == OrbitMode.HoldRightClick ? HoldModeSensitivityMultiplier : 1f;
+            float pitchSign = _invertY ? -1f : 1f;
+            _yawTarget += Input.MouseDelta.X * sens * mult;
+            _pitchTarget += pitchSign * Input.MouseDelta.Y * sens * mult;
+        }
+
+        // 1a-bis. Gamepad: el stick no necesita un modo de "boton mantenido", asi que va
+        // fuera del bloque de shouldOrbit. El eje se integra con dt porque es una velocidad,
+        // no un salto: sin el dt la camara se teletransporta al pulsar el stick.
+        if (_gamepadEnabled && Input.IsGamepadConnected(_gamepadIndex))
+        {
+            Float2 stick = Input.GetGamepadRightStick(_gamepadIndex);
+            if (Maths.Abs(stick.X) > _gamepadDeadzone || Maths.Abs(stick.Y) > _gamepadDeadzone)
+            {
+                float pitchSign = _invertY ? -1f : 1f;
+                _yawTarget += stick.X * _gamepadSensitivity * dtRot;
+                _pitchTarget += pitchSign * stick.Y * _gamepadSensitivity * dtRot;
+            }
+        }
+
+        // 1a-ter. Zoom con rueda. Fuera del bloque de shouldOrbit a proposito: el zoom
+        // tambien tiene que funcionar con el cursor libre. El escalado por Distance lo hace
+        // relativo (un tope cerca mueve menos que uno lejos). Distance se muta a proposito,
+        // para que el Inspector muestre el valor actual.
+        if (_zoomEnabled)
+        {
+            float wheel = Input.MouseWheelDelta;
+            if (wheel != 0f)
+            {
+                float minZoom = _minZoomDistance;
+                float maxZoom = Maths.Max(_minZoomDistance, _maxZoomDistance);
+                Distance = Maths.Clamp(
+                    Distance - wheel * _zoomSpeed * (Distance * 0.1f),
+                    minZoom, maxZoom);
+            }
+        }
+
+        _pitchTarget = Maths.Clamp(_pitchTarget, MinPitch, MaxPitch);
+
+        // El suavizado va despues de integrar el input, no antes: al reves el objetivo
+        // acumula un frame de retardo y la camara se siente pegada.
         _yaw = Maths.Lerp(_yaw, _yawTarget, tRot);
         _pitch = Maths.Lerp(_pitch, _pitchTarget, tRot);
 
@@ -131,7 +256,17 @@ public class OrbitFollowCamera : MonoBehaviour
         if (!_hasTargetPos)
         {
             _smoothedTargetPos = targetPivot;
+            _currentDistance = Distance;
             _hasTargetPos = true;
+        }
+        else if (_snapOnTeleport
+            && Float3.Distance(targetPivot, _lastRawPivot) > _teleportThreshold)
+        {
+            // Teletransporte: saltar en vez de barrer el mapa. Se compara contra el pivote
+            // crudo anterior, no contra el suavizado: el suavizado siempre va atrasado, y su
+            // retardo crece con la velocidad, asi que un sprint normal lo dispararia.
+            _smoothedTargetPos = targetPivot;
+            _currentDistance = Distance;
         }
         else
         {
@@ -142,28 +277,37 @@ public class OrbitFollowCamera : MonoBehaviour
                 Maths.Lerp(_smoothedTargetPos.Z, targetPivot.Z, t)
             );
         }
+        _lastRawPivot = targetPivot;
 
         // 4. Calcular la posicion deseada de la camara a partir del pivote suavizado
         Quaternion rotation = Quaternion.FromEuler(_pitch, _yaw, 0);
         Float3 offsetDir = rotation * Float3.UnitZ;
-        Float3 desiredPos = _smoothedTargetPos - offsetDir * Distance;
 
-        // 5. Colision opcional
+        // 5a. Resolver la distancia objetivo aplicando la colision
+        float targetDistance = Distance;
         if (CollisionEnabled)
         {
             Float3 rayDir = -offsetDir; // desde el pivote hacia la camara
             PhysicsWorld? world = GameObject.IsValid() && GameObject.Scene.IsValid()
                 ? GameObject.Scene.Physics
                 : null;
-            if (world != null)
+            if (world != null
+                && world.Raycast(_smoothedTargetPos, rayDir, targetDistance, out RaycastHit hitInfo))
             {
-                if (world.Raycast(_smoothedTargetPos, rayDir, Distance, out RaycastHit hitInfo))
-                {
-                    float d = Maths.Max(hitInfo.Distance - CollisionRadius, MinDistance);
-                    desiredPos = _smoothedTargetPos + rayDir * d;
-                }
+                targetDistance = Maths.Max(hitInfo.Distance - CollisionRadius, MinDistance);
             }
         }
+
+        // 5b. Spring: rapido al acercarse (clipping dentro de una pared es peor que un
+        // tiron) y lento al alejarse (evita que la camara salga disparada al pasar un hueco).
+        float springSpeed = targetDistance < _currentDistance
+            ? _collisionPullInSpeed
+            : _collisionPushOutSpeed;
+        _currentDistance = Maths.Lerp(
+            _currentDistance, targetDistance, 1f - MathF.Exp(-springSpeed * dt));
+
+        // 5c. Reconstruir la posicion con la distancia real
+        Float3 desiredPos = _smoothedTargetPos - offsetDir * _currentDistance;
 
         // 6. Aplicar a la camara
         Transform.Position = desiredPos;
