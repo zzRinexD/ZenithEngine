@@ -55,15 +55,18 @@ public class ThirdPersonCharacterMovement : MonoBehaviour
         if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.Up)) inputY += 1f;
         if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.Down)) inputY -= 1f;
 
-        // Forward para el jugador = direccion desde la camara hacia el target.
-        // Se calcula directamente porque Camera.Transform.Forward puede devolver
-        // -Z (convencion OpenGL) y no es de fiar para esto.
-        Float3 camToTarget = Camera.Target.Position - Camera.Transform.Position;
-        camToTarget.Y = 0;
-        Float3 flatF = Float3.Normalize(camToTarget);
+        // Base de movimiento publicada por la camara. Antes se derivaba de
+        // Camera.Target.Position - Camera.Transform.Position, lo que mezclaba el pivote
+        // suavizado con el target crudo y hacia que "adelante" se retorciera hacia donde
+        // nos moviamos, sobre todo con la camara cerca por colision.
+        Float3 flatF = Camera.FlatForward;
+        Float3 flatR = Camera.FlatRight;
 
-        // Right = cross(Up, Forward) para obtener +X cuando flatF = +Z.
-        Float3 flatR = Float3.Normalize(Float3.Cross(Float3.UnitY, flatF));
+        // Base degenerada: no mover. Un NaN aqui se propaga a la velocidad y a la posicion,
+        // y el personaje desaparece sin recuperacion. Un forward de longitud ~0 tampoco
+        // significa nada util.
+        if (Float3.LengthSquared(flatF) < 1e-6f || Float3.LengthSquared(flatR) < 1e-6f)
+            return;
 
         Float3 moveDir = flatF * inputY + flatR * inputX;
         float mag = Float3.Length(moveDir);

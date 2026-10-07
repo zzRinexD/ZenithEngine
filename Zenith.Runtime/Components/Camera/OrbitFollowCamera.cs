@@ -42,6 +42,25 @@ public class OrbitFollowCamera : MonoBehaviour
     private bool _hasTargetPos;
     private OrbitMode _lastAppliedMode = (OrbitMode)(-1);
 
+    /// <summary>
+    /// Forward horizontal de la camara, en coordenadas de mundo. Es la direccion en la que
+    /// se mueve el jugador al pulsar W.
+    /// <para>
+    /// Se deriva del yaw, no de la posicion, a proposito: leerla de las posiciones
+    /// arrastraba el retardo del pivote suavizado (la camara se coloca desde
+    /// <c>_smoothedTargetPos</c> pero el punto de mira se calculaba desde
+    /// <c>Target.Position</c> crudo), y hacia que se moviera el jugador. Ademas el error
+    /// crecia al acercarse la camara por colision, que es justo cuando mas hace falta.
+    /// </para>
+    /// </summary>
+    public Float3 FlatForward { get; private set; }
+
+    /// <summary>
+    /// Right horizontal de la camara, en coordenadas de mundo. Es la direccion de D.
+    /// Siempre perpendicular a <see cref="FlatForward"/>.
+    /// </summary>
+    public Float3 FlatRight { get; private set; }
+
     public override void OnEnable()
     {
         _lastAppliedMode = (OrbitMode)(-1);
@@ -98,6 +117,12 @@ public class OrbitFollowCamera : MonoBehaviour
         _yaw = Maths.Lerp(_yaw, _yawTarget, tRot);
         _pitch = Maths.Lerp(_pitch, _pitchTarget, tRot);
 
+        // 1b. Publicar la base de movimiento del personaje, antes de tocar el pivote.
+        // Sale del yaw (lo que la camara dibuja de verdad) y no de _yawTarget, que seria
+        // una suavizacion por delante, ni de Transform.Rotation, que al final del frame
+        // queda apuntado al lookAt e incluye el pitch.
+        PublishMovementBasis();
+
         // 2. Calcular el pivote (punto alrededor del que orbita la camara)
         Float3 targetPivot = Target.Position + new Float3(0, TargetHeight, 0);
 
@@ -147,6 +172,33 @@ public class OrbitFollowCamera : MonoBehaviour
         Float3 lookAtPoint = Target.Position + new Float3(0, ChestOffset, 0);
         Float3 toLookAt = Float3.Normalize(lookAtPoint - desiredPos);
         Transform.Rotation = Quaternion.LookRotation(toLookAt, Float3.UnitY);
+    }
+
+    /// <summary>
+    /// Rellena <see cref="FlatForward"/> y <see cref="FlatRight"/> a partir del yaw actual.
+    /// Se separan del bloque de rotacion a proposito: son parte del contrato publico de la
+    /// camara hacia el personaje, no un detalle del dibujado.
+    /// </summary>
+    private void PublishMovementBasis()
+    {
+        Quaternion flatRot = Quaternion.FromEuler(0f, _yaw, 0f);
+        Float3 fwd = flatRot * Float3.UnitZ;
+        fwd.Y = 0f;
+
+        // Un yaw puro siempre da un forward aplanado de longitud ~1, asi que este caso es
+        // defensivo. Publicar una base neutra, nunca un NaN: se propagaria a la velocidad
+        // del personaje y lo perderiamos sin vuelta.
+        if (Float3.LengthSquared(fwd) < 1e-6f)
+        {
+            FlatForward = Float3.UnitZ;
+            FlatRight = Float3.UnitX;
+            return;
+        }
+
+        FlatForward = Float3.Normalize(fwd);
+        // Misma convencion que usaba el personaje antes (right = cross(up, forward)):
+        // da +X cuando el forward es +Z.
+        FlatRight = Float3.Normalize(Float3.Cross(Float3.UnitY, FlatForward));
     }
 
     private void ApplyCursorState()
