@@ -101,7 +101,8 @@ public class ThirdPersonCharacterMovement : MonoBehaviour
         if (mag > MovementThreshold)
         {
             moveDir = Float3.Normalize(moveDir);
-            targetVelocity = moveDir * WalkSpeed;
+            bool wantsRun = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            targetVelocity = moveDir * (wantsRun ? RunSpeed : WalkSpeed);
         }
 
         float dtMove = Time.DeltaTime;
