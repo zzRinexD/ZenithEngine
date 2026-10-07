@@ -126,19 +126,19 @@ public class ThirdPersonCharacterMovement : MonoBehaviour
 
         Controller.Move(horizontalMotion + verticalMotion);
 
-        // Solo rotar el modelo cuando hay componente forward en el input.
-        // Puro A/D (strafe) o puro S (backpedal) no cambian la orientacion.
-        // W, W+A, W+D, W+S(no aplica) si rotan.
+        // Solo rotar el modelo cuando hay input de movimiento.
+        // En Strafe el personaje siempre mira hacia donde mira la camara.
+        // En FaceMovement rota con cualquier componente, para que el puro A/D no produzca
+        // un moonwalk lateral (antes solo giraba con input vertical y el personaje se
+        // deslizaba de lado mirando al frente). S pura sigue sin rotar: backpedal.
         bool shouldRotate;
         if (StrafeMode)
         {
-            // En Strafe el personaje siempre mira hacia donde mira la camara
             shouldRotate = true;
         }
         else
         {
-            // En FaceMovement solo rotar si hay input forward o diagonales con forward
-            shouldRotate = inputY > 0.01f;
+            shouldRotate = inputY > 0.01f || inputX > 0.01f;
         }
 
         if (shouldRotate)
