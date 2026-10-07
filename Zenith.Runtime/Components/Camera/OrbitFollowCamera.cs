@@ -22,8 +22,8 @@ public class OrbitFollowCamera : MonoBehaviour
     public float Sensitivity = 0.13f;
     public float HoldModeSensitivityMultiplier = 1.8f;
     public float RotationSmoothing = 18f;
-    public float MinPitch = -18f;
-    public float MaxPitch = 36f;
+    public float MinPitch = -36f;
+    public float MaxPitch = 18f;
 
     [Header("Follow")]
     public float FollowSmoothing = 10f;
@@ -88,7 +88,7 @@ public class OrbitFollowCamera : MonoBehaviour
         {
             float mult = Mode == OrbitMode.HoldRightClick ? HoldModeSensitivityMultiplier : 1f;
             _yawTarget += Input.MouseDelta.X * Sensitivity * mult;
-            _pitchTarget -= Input.MouseDelta.Y * Sensitivity * mult;
+            _pitchTarget += Input.MouseDelta.Y * Sensitivity * mult;
         }
         _pitchTarget = Maths.Clamp(_pitchTarget, MinPitch, MaxPitch);
 
