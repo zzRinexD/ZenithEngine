@@ -168,8 +168,13 @@ public class OrbitFollowCamera : MonoBehaviour
         // 6. Aplicar a la camara
         Transform.Position = desiredPos;
 
-        // 7. Punto de mira: Target.Position + ChestOffset (SIN sumar TargetHeight)
-        Float3 lookAtPoint = Target.Position + new Float3(0, ChestOffset, 0);
+        // 7. Punto de mira: se deriva del pivote suavizado, no de Target.Position crudo.
+        // Antes la camara se colocaba desde _smoothedTargetPos pero el lookAt se recalculaba
+        // desde el target sin suavizar, y el punto de mira se separaba del personaje
+        // mientras este se movia. ChestOffset se mide desde los pies del target y
+        // _smoothedTargetPos ya lleva TargetHeight sumado, asi que se resta para llegar al
+        // mismo punto del mundo que antes.
+        Float3 lookAtPoint = _smoothedTargetPos + new Float3(0, ChestOffset - TargetHeight, 0);
         Float3 toLookAt = Float3.Normalize(lookAtPoint - desiredPos);
         Transform.Rotation = Quaternion.LookRotation(toLookAt, Float3.UnitY);
     }

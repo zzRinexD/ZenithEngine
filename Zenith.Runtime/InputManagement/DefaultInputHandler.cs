@@ -65,7 +65,7 @@ public class DefaultInputHandler : IInputHandler, IDisposable
         get
         {
             Int2 delta = _currentMousePos - _prevMousePos;
-            return new Float2(delta.X, delta.Y); // Invert Y to match gamepad (up = positive)
+            return new Float2(delta.X, delta.Y);
         }
     }
     public float MouseWheelDelta => Mice[0].ScrollWheels[0].Y;
@@ -378,8 +378,8 @@ public class DefaultInputHandler : IInputHandler, IDisposable
         if (axisIndex < 0 || axisIndex >= gamepad.Thumbsticks.Count)
             return Float2.Zero;
 
-        Thumbstick thumbstick = gamepad.Thumbsticks[axisIndex];
-        return new Float2(thumbstick.X, thumbstick.Y); // We flip y to make UP on the stick positive
+            Thumbstick thumbstick = gamepad.Thumbsticks[axisIndex];
+            return new Float2(thumbstick.X, thumbstick.Y);
     }
 
     public float GetGamepadTrigger(int gamepadIndex, int triggerIndex)
