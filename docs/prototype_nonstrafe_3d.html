@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Non-Strafe Movement Test</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #121212;
+               font-family: -apple-system, system-ui, sans-serif; color: #EDDEDD; }
+  #info {
+    position: absolute; top: 16px; left: 16px;
+    background: rgba(18,18,18,0.78); padding: 12px 16px;
+    border: 1px solid #2A2A2A; border-radius: 6px;
+    font-size: 13px; line-height: 1.7; pointer-events: none;
+  }
+  #info strong { display: block; margin-bottom: 6px; }
+  .k { display: inline-block; padding: 1px 6px; background: #1E1E1E;
+       border: 1px solid #333; border-radius: 3px;
+       font-family: monospace; font-size: 12px; }
+  #hint {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: rgba(18,18,18,0.85); padding: 10px 20px;
+    border: 1px solid #2A2A2A; border-radius: 6px;
+    font-size: 14px; transition: opacity 0.3s;
+  }
+  #hint.hidden { opacity: 0; }
+  #dbg {
+    position: absolute; top: 16px; right: 16px;
+    background: rgba(18,18,18,0.78); padding: 12px 16px;
+    border: 1px solid #2A2A2A; border-radius: 6px;
+    font-size: 12px; line-height: 1.7; pointer-events: none;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    min-width: 230px;
+  }
+  #dbg div { display: flex; justify-content: space-between; gap: 16px; }
+  #dbg span:first-child { color: #8A8A8A; }
+  .ok { color: #6FD08C; } .warn { color: #F0B45F; }
+  hr { border: 0; border-top: 1px solid #2A2A2A; margin: 7px 0; }
+</style>
+</head>
+<body>
+<div id="info">
+  <strong>Non-Strafe · Third-person test</strong>
+  <span class="k">W</span> <span class="k">A</span> <span class="k">S</span> <span class="k">D</span> mover<br>
+  <span class="k">Mouse</span> orbitar cámara<br>
+  <span class="k">Tab</span> strafe on/off · <span class="k">Esc</span> liberar cursor
+</div>
+
+<div id="dbg"></div>
+
+<div id="hint">Click para empezar</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ------- Scene -------
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x121212);
+scene.fog = new THREE.Fog(0x121212, 25, 70);
+
+// ------- Camera -------
+const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 200);
+
+// ------- Renderer -------
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+document.body.appendChild(renderer.domElement);
+
+// ------- Lights -------
+scene.add(new THREE.HemisphereLight(0xEDDEDD, 0x333333, 0.7));
+const key = new THREE.DirectionalLight(0xFFFFFF, 0.9);
+key.position.set(6, 12, 8);
+scene.add(key);
+
+// ------- Floor -------
+scene.add(new THREE.GridHelper(100, 100, 0x3A3A3A, 0x222222));
+
+// ------- Reference boxes -------
+const refMat = new THREE.MeshStandardMaterial({ color: 0x3A3A3A, roughness: 0.9 });
+[[5,-5],[-5,-5],[5,5],[-5,5],[10,0],[-10,0],[0,10],[0,-10]].forEach(([x,z]) => {
+  const b = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), refMat);
+  b.position.set(x, 0.5, z);
+  scene.add(b);
+});
+
+// ------- Player -------
+const player = new THREE.Group();
+scene.add(player);
+
+// Body: sides dark blue, front (+Z) off-white
+const sideMat = new THREE.MeshStandardMaterial({ color: 0x2D5B9E, roughness: 0.55 });
+const faceMat = new THREE.MeshStandardMaterial({ color: 0xEDDEDD, roughness: 0.4 });
+// BoxGeometry material order: +X, -X, +Y, -Y, +Z, -Z
+const bodyMats = [sideMat, sideMat, sideMat, sideMat, faceMat, sideMat];
+const body = new THREE.Mesh(new THREE.BoxGeometry(1, 1.5, 1), bodyMats);
+body.position.y = 0.75;
+player.add(body);
+
+// Nose: cone pointing along +Z, makes rotation super obvious
+const nose = new THREE.Mesh(
+  new THREE.ConeGeometry(0.16, 0.45, 10),
+  new THREE.MeshStandardMaterial({ color: 0xFFAA00, roughness: 0.4 })
+);
+nose.rotation.x = Math.PI / 2;  // +Y -> +Z
+nose.position.set(0, 0.9, 0.62);
+player.add(nose);
+
+// ------- Camera orbit -------
+let camYaw = Math.PI;   // start behind the player
+let camPitch = 0.35;
+const CAM_DIST = 8;
+const CAM_PITCH_MIN = 0.05;
+const CAM_PITCH_MAX = 1.30;
+
+// ------- Input -------
+const keys = {};
+let pointerLocked = false;
+
+addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'Tab') { strafe = !strafe; e.preventDefault(); }
+});
+addEventListener('keyup',   e => { keys[e.code] = false; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+
+// strafe = solo para contrastar. El modo por defecto es NON-STRAFE.
+let strafe = false;
+
+const hintEl = document.getElementById('hint');
+
+document.addEventListener('pointerlockchange', () => {
+  pointerLocked = document.pointerLockElement === renderer.domElement;
+  hintEl.classList.toggle('hidden', pointerLocked);
+});
+
+renderer.domElement.addEventListener('click', () => {
+  if (!pointerLocked) renderer.domElement.requestPointerLock();
+});
+
+document.addEventListener('mousemove', e => {
+  if (!pointerLocked) return;
+  camYaw   -= e.movementX * 0.0025;
+  camPitch -= e.movementY * 0.0025;
+  camPitch = Math.max(CAM_PITCH_MIN, Math.min(CAM_PITCH_MAX, camPitch));
+});
+
+// ------- Movement constants -------
+const SPEED = 5;          // m/s
+const TURN_SPEED = 12;    // exponential smoothing constant
+const INPUT_EPSILON = 0.01;
+
+// ------- Camera basis (horizontal) -------
+// La cámara está en  player + (sin,cos)*dist , así que su forward es lo contrario.
+function camBasis() {
+  return {
+    fwdX: -Math.sin(camYaw), fwdZ: -Math.cos(camYaw),
+    rgtX:  Math.cos(camYaw), rgtZ: -Math.sin(camYaw),
+  };
+}
+
+// Forward del personaje, para el modo strafe.
+function charBasis() {
+  const q = new THREE.Quaternion().copy(player.quaternion);
+  const v = new THREE.Vector3(0, 0, 1).applyQuaternion(q);
+  const fx = v.x, fz = v.z;
+  const L = Math.hypot(fx, fz) || 1;
+  return { fwdX: fx / L, fwdZ: fz / L, rgtX: fz / L, rgtZ: -fx / L };
+}
+
+// ------- Update: player -------
+function updatePlayer(dt) {
+  const inputZ = (keys['KeyW'] ? 1 : 0) + (keys['KeyS'] ? -1 : 0); // W=+1, S=-1
+  const inputX = (keys['KeyD'] ? 1 : 0) + (keys['KeyA'] ? -1 : 0); // D=+1, A=-1
+
+  // NON-STRAFE: la base es la de la CÁMARA.
+  // El personaje rota hacia donde se mueve (no hacia donde mira la cámara).
+  const B = strafe ? charBasis() : camBasis();
+
+  let mx = B.fwdX * inputZ + B.rgtX * inputX;
+  let mz = B.fwdZ * inputZ + B.rgtZ * inputX;
+
+  const mag = Math.hypot(mx, mz);
+  if (mag < INPUT_EPSILON) return; // no input -> keep rotation, keep position
+
+  mx /= mag;
+  mz /= mag;
+
+  // Move
+  player.position.x += mx * SPEED * dt;
+  player.position.z += mz * SPEED * dt;
+
+  // Rotate toward movement direction — this is the non-strafe rule.
+  // The character's local +Z should point along (mx, mz).
+  const targetYaw = strafe ? Math.atan2(-B.fwdX, -B.fwdZ) : Math.atan2(mx, mz);
+  const targetQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, targetYaw, 0));
+  const t = 1 - Math.exp(-TURN_SPEED * dt); // framerate-independent
+  player.quaternion.slerp(targetQuat, t);   // shortest path
+}
+
+// ------- Update: camera -------
+function updateCamera() {
+  const pivotY = player.position.y + 1.0;
+  const ox = Math.cos(camPitch) * Math.sin(camYaw) * CAM_DIST;
+  const oy = Math.sin(camPitch) * CAM_DIST;
+  const oz = Math.cos(camPitch) * Math.cos(camYaw) * CAM_DIST;
+
+  camera.position.set(
+    player.position.x + ox,
+    pivotY + oy,
+    player.position.z + oz
+  );
+  camera.lookAt(player.position.x, pivotY, player.position.z);
+}
+
+// ------- Debug -------
+const dbg = document.getElementById('dbg');
+const f2 = n => (n >= 0 ? ' ' : '') + n.toFixed(2);
+function updateDebug() {
+  const B = camBasis();
+  const q = new THREE.Quaternion().copy(player.quaternion);
+  const cw = new THREE.Vector3(0, 0, 1).applyQuaternion(q);
+  const cz = Math.atan2(cw.x, cw.z) * 180 / Math.PI;
+  const ay = Math.atan2(-B.fwdX, -B.fwdZ) * 180 / Math.PI;
+
+  // Dot entre W y el forward de la cámara: +1 = se aleja, -1 = se acerca.
+  const wDot = B.fwdX * -B.fwdX + B.fwdZ * -B.fwdZ;
+  const away = wDot > 0;
+
+  dbg.innerHTML =
+    `<div><span>modo</span><b>${strafe ? 'STRAFE' : 'NON-STRAFE'}</b></div><hr>` +
+    `<div><span>W → mundo</span><span>${f2(-B.fwdX)}, ${f2(-B.fwdZ)}</span></div>` +
+    `<div><span>S → mundo</span><span>${f2(B.fwdX)}, ${f2(B.fwdZ)}</span></div>` +
+    `<div><span>D → mundo</span><span>${f2(-B.rgtX)}, ${f2(-B.rgtZ)}</span></div>` +
+    `<div><span>A → mundo</span><span>${f2(B.rgtX)}, ${f2(B.rgtZ)}</span></div><hr>` +
+    `<div><span>W se aleja de cámara</span>` +
+    `<b class="${away ? 'ok' : 'warn'}">${away ? 'SÍ' : 'NO'}</b></div>` +
+    `<div><span>personaje yaw</span><span>${cz.toFixed(0)}°</span></div>` +
+    `<div><span>cámara   yaw</span><span>${ay.toFixed(0)}°</span></div>`;
+}
+
+// ------- Loop -------
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  updatePlayer(dt);
+  updateCamera();
+  updateDebug();
+  renderer.render(scene, camera);
+}
+animate();
+
+// ------- Resize -------
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
