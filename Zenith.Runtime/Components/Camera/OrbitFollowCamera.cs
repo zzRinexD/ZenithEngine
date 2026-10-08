@@ -119,22 +119,34 @@ public class OrbitFollowCamera : MonoBehaviour
 
     /// <summary>
     /// Forward horizontal de la camara, en coordenadas de mundo. Es la direccion en la que
-    /// se mueve el jugador al pulsar W.
+    /// se mueve el personaje al pulsar W: es decir, hacia donde mira la camara, no hacia donde
+    /// mire el personaje. <see cref="ThirdPersonCharacterMovement"/> la toma como base de todo
+    /// su movimiento, en los dos modos.
     /// <para>
-    /// Se deriva del yaw, no de la posicion, a proposito: leerla de las posiciones
-    /// arrastraba el retardo del pivote suavizado (la camara se coloca desde
-    /// <c>_smoothedTargetPos</c> pero el punto de mira se calculaba desde
-    /// <c>Target.Position</c> crudo), y hacia que se moviera el jugador. Ademas el error
-    /// crecia al acercarse la camara por colision, que es justo cuando mas hace falta.
+    /// Se deriva solo del yaw, a proposito. Leerla de las posiciones arrastraba el retardo del
+    /// pivote suavizado (la camara se coloca desde <c>_smoothedTargetPos</c> pero el punto de mira
+    /// se calculaba desde <c>Target.Position</c> crudo) y hacia que "adelante" se retorciera hacia
+    /// donde se movia el jugador. Ademas el error crecia al acercarse la camara por colision, que
+    /// es justo cuando mas hace falta.
     /// </para>
     /// </summary>
     public Float3 FlatForward { get; private set; }
 
     /// <summary>
-    /// Right horizontal de la camara, en coordenadas de mundo. Es la direccion de D.
-    /// Siempre perpendicular a <see cref="FlatForward"/>.
+    /// Right horizontal de la camara, en coordenadas de mundo: la direccion de D. Siempre
+    /// perpendicular a <see cref="FlatForward"/>.
     /// </summary>
     public Float3 FlatRight { get; private set; }
+
+    /// <summary>
+    /// Base de movimiento completa en una sola llamada. Es lo que consume el personaje; las dos
+    /// propiedades sueltas quedan por comodidad y para inspeccion.
+    /// </summary>
+    public void GetMovementBasis(out Float3 forward, out Float3 right)
+    {
+        forward = FlatForward;
+        right = FlatRight;
+    }
 
     public override void OnEnable()
     {
