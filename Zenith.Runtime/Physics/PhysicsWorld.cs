@@ -306,18 +306,22 @@ public class PhysicsWorld
 
         // Static colliders share one body per layer, so a shape with no rigidbody of its own still has
         // to be checked against the ignored one, by way of the collider that created it. One lookup
-        // serves both exclusions.
+        // serves every exclusion.
         bool checkStaticOwner = ignoringBody && userData.Rigidbody.IsNotValid();
-        if (!filter.IgnoreCollider.IsValid() && !checkStaticOwner) return true;
+        bool hasSingleCollider = filter.IgnoreCollider.IsValid();
+        if (!hasSingleCollider && !checkStaticOwner && !HasColliderSet(filter)) return true;
 
         Collider owner = GetShapeOwner(shape);
         if (!owner.IsValid()) return true;
 
-        if (owner == filter.IgnoreCollider) return false;
+        if (filter.Excludes(owner)) return false;
         if (checkStaticOwner && owner.GetComponentInParent<Rigidbody3D>() == filter.IgnoreRigidbody) return false;
 
         return true;
     }
+
+    /// <summary>Whether the filter names more than one collider to skip.</summary>
+    private static bool HasColliderSet(in QueryFilter filter) => filter.IgnoreColliders is { Length: > 0 };
 
     private bool AcceptsProxy(IDynamicTreeProxy proxy, in QueryFilter filter)
     {

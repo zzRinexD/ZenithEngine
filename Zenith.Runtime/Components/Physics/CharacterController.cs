@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 using Jitter2.Collision.Shapes;
 using Jitter2.LinearMath;
@@ -100,9 +101,23 @@ public class CharacterController : MonoBehaviour
     private bool _selfBodyResolved;
 
     /// <summary>
-    /// The filter every internal cast uses: the collision mask, minus anything belonging to a
-    /// Rigidbody3D on this GameObject. Without that exclusion a controller placed on a body would
-    /// immediately collide with itself and refuse to move.
+    /// Colliders on this GameObject and its descendants, which the controller must not collide with.
+    /// Cached alongside <see cref="_selfBody"/> for the same reason.
+    /// </summary>
+    private Collider[] _ownColliders;
+
+    /// <summary>
+    /// The filter every internal cast uses: the collision mask, minus this controller's own rigidbody
+    /// and its own colliders.
+    /// <para>
+    /// The rigidbody exclusion is what stops a controller placed on a body hitting itself. The
+    /// collider exclusion covers the other half of that: a character whose visual mesh carries its own
+    /// collider, usually a child GameObject, would otherwise collide with its own mesh. Nothing about
+    /// that is a wall, so <c>Depenetrate</c> would shove the capsule out of it every frame while
+    /// <c>CollideAndSlide</c> pushed it back, and the two cancel the requested movement and leave a
+    /// constant drift pointing the opposite way. Descendants only: a collider on a sibling GameObject is
+    /// a genuine obstacle and must still collide.
+    /// </para>
     /// </summary>
     private QueryFilter Filter
     {
@@ -111,19 +126,38 @@ public class CharacterController : MonoBehaviour
             if (!_selfBodyResolved) ResolveSelfBody();
 
             var filter = new QueryFilter(CollisionMask);
-            return _selfBody.IsValid() ? filter.Ignoring(_selfBody) : filter;
+
+            if (_selfBody.IsValid()) filter = filter.Ignoring(_selfBody);
+
+            return _ownColliders is { Length: > 0 }
+                ? filter.Ignoring(_ownColliders)
+                : filter;
         }
     }
 
     /// <summary>
-    /// Re-resolves the rigidbody the controller must not collide with. Call after re-parenting, or after
-    /// adding or removing a Rigidbody3D above this controller.
+    /// Re-resolves the rigidbody and the colliders this controller must not collide with. Call after
+    /// re-parenting, or after adding or removing a Rigidbody3D or a Collider on this GameObject or its
+    /// descendants.
     /// </summary>
     public void ResolveSelfBody()
     {
         _selfBody = GetComponentInParent<Rigidbody3D>();
+        _ownColliders = ResolveOwnColliders();
         _selfBodyResolved = true;
     }
+
+    /// <summary>
+    /// Collects the colliders that belong to this controller: every collider under this GameObject,
+    /// inactive ones included so that enabling a mesh collider later does not leave it colliding with
+    /// its own controller.
+    /// <para>
+    /// <see cref="CharacterController"/> is not a <see cref="Collider"/>, so the controller's own shape
+    /// is never in this list and never has to be filtered out of it.
+    /// </para>
+    /// </summary>
+    private Collider[] ResolveOwnColliders()
+        => GameObject.GetComponentsInChildren<Collider>(includeSelf: true, includeInactive: true).ToArray();
 
     public override void OnEnable() => ResolveSelfBody();
 

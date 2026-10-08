@@ -1,6 +1,9 @@
 ﻿// This file is part of the Prowl Game Engine
 // Licensed under the MIT License. See the LICENSE file in the project root for details.
 
+using System;
+using System.Collections.Generic;
+
 namespace Prowl.Runtime;
 
 /// <summary>
@@ -21,6 +24,17 @@ public struct QueryFilter
 
     /// <summary>Skip this one collider.</summary>
     public Collider IgnoreCollider;
+
+    /// <summary>
+    /// Skip every collider in this set. A character with a visual mesh collider under it has more
+    /// than one shape of its own to skip, and a filter that can name only one of them leaves the
+    /// rest to collide with their own controller.
+    /// <para>
+    /// Kept alongside <see cref="IgnoreCollider"/> rather than replacing it, so existing single
+    /// exclusion call sites keep reading the way they do and both kinds of query share one path.
+    /// </para>
+    /// </summary>
+    public Collider[] IgnoreColliders;
 
     /// <summary>Hits anything on any layer.</summary>
     public static readonly QueryFilter Default = new(LayerMask.Everything);
@@ -46,8 +60,49 @@ public struct QueryFilter
         return filter;
     }
 
+    /// <summary>This filter, additionally skipping every collider in <paramref name="colliders"/>.</summary>
+    public readonly QueryFilter Ignoring(IReadOnlyList<Collider> colliders)
+    {
+        QueryFilter filter = this;
+
+        if (colliders is null || colliders.Count == 0) return filter;
+
+        Collider[] copy = new Collider[colliders.Count];
+        for (int i = 0; i < colliders.Count; i++) copy[i] = colliders[i];
+
+        // Merge rather than replace: a caller that already excluded one collider must not lose it.
+        if (filter.IgnoreCollider.IsValid())
+        {
+            Collider[] merged = new Collider[copy.Length + 1];
+            merged[0] = filter.IgnoreCollider;
+            Array.Copy(copy, 0, merged, 1, copy.Length);
+            copy = merged;
+        }
+
+        filter.IgnoreColliders = copy;
+        return filter;
+    }
+
     /// <summary>Whether anything is excluded beyond the layer mask. Lets queries skip the owner lookup.</summary>
-    internal readonly bool HasExclusions => IgnoreRigidbody.IsValid() || IgnoreCollider.IsValid();
+    internal readonly bool HasExclusions =>
+        IgnoreRigidbody.IsValid() || IgnoreCollider.IsValid() || HasIgnoredColliderSet;
+
+    private readonly bool HasIgnoredColliderSet => IgnoreColliders is { Length: > 0 };
+
+    /// <summary>Whether this specific collider is excluded, by either exclusion field.</summary>
+    internal readonly bool Excludes(Collider candidate)
+    {
+        if (candidate.IsNotValid()) return false;
+        if (IgnoreCollider.IsValid() && candidate == IgnoreCollider) return true;
+
+        Collider[] set = IgnoreColliders;
+        if (set is null) return false;
+
+        for (int i = 0; i < set.Length; i++)
+            if (set[i] == candidate) return true;
+
+        return false;
+    }
 
     public static implicit operator QueryFilter(LayerMask layerMask) => new(layerMask);
 }
